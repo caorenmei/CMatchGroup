@@ -1,6 +1,6 @@
 // 数学工具函数示例实现
 
-#include "math_utils.h"
+#include "cmatch/math_utils.h"
 
 namespace cmatch {
 

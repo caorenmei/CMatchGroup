@@ -1,13 +1,14 @@
 # src 目录构建配置
 
-# 主静态库
 add_library(
-  mylib
-  math_utils.cpp
+  cmatch
+  cmatch/math_utils.cpp
 )
 
+add_library(cmatch::cmatch ALIAS cmatch)
+
 target_include_directories(
-  mylib
+  cmatch
   PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )

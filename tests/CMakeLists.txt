@@ -12,7 +12,7 @@ add_executable(
 target_link_libraries(
   test_math_utils
   PRIVATE
-  mylib
+  cmatch
   GTest::gtest_main
 )
 

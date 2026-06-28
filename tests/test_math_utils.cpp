@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "math_utils.h"
+#include "cmatch/math_utils.h"
 
 namespace cmatch {
 namespace {
