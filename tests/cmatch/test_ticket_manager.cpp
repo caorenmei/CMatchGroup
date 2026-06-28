@@ -227,7 +227,7 @@ TEST(TicketManagerTest, GroupIdUniquenessAcrossZonesAndSettlements) {
   // Add a new ticket: allocator must start after sequence 5
   auto entity3 = manager.GetOrCreateEntity(3, 1);
   SetScore(entity3, info.score_attr_id(), 100);
-  tm.AddTicket(info, time, 50, 3, rng);
+  tm.AddTicket(MakeMockConfig(info, time), 50, 3, rng);
 
   const std::uint64_t new_group_id =
       manager.GetEntity(3)->GetData().seasons().at(1).group_id();
@@ -448,7 +448,7 @@ TEST(TicketManagerTest, AddTicketCreatesInitialGroup) {
   auto entity = manager.GetOrCreateEntity(42, 5);
   SetScore(entity, info.score_attr_id(), 100);
 
-  tm.AddTicket(info, time, 50, 42, rng);
+  tm.AddTicket(MakeMockConfig(info, time), 50, 42, rng);
 
   const auto& ticket = entity->GetData();
   ASSERT_EQ(ticket.seasons().count(1), 1);
@@ -459,6 +459,38 @@ TEST(TicketManagerTest, AddTicketCreatesInitialGroup) {
   EXPECT_EQ(group.end_time(), time.end_time());
   EXPECT_EQ(group.group_id() >> 32, 5);  // high 32 bits = zone_id
   EXPECT_TRUE(manager.IsDirty(42));
+}
+
+TEST(TicketManagerTest, AddTicketFillsUnfilledGroupFirst) {
+  testing::MockTicketEntityManager manager;
+  TicketManager tm(manager);
+
+  config::SeasonInfo info = MakeSeasonInfo(1);
+  (*info.mutable_grades())[1].set_group_size(3);
+  config::SeasonTime time = MakeSeasonTime(0, 100);
+  std::mt19937 rng(12345);
+
+  // 当前赛季内有一个未满分组（size=1，容量=3）
+  auto existing = manager.GetOrCreateEntity(1, 1);
+  SetScore(existing, info.score_attr_id(), 100);
+  {
+    auto& group = (*existing->GetData().mutable_seasons())[1];
+    group.set_type(1);
+    group.set_begin_time(0);
+    group.set_end_time(100);
+    group.set_grade(1);
+    group.set_group_id(1000);
+  }
+
+  // 重建索引（Initialize 会执行）
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
+
+  // 新凭据应加入 group 1000
+  auto new_entity = manager.GetOrCreateEntity(2, 1);
+  SetScore(new_entity, info.score_attr_id(), 200);
+  tm.AddTicket(MakeMockConfig(info, time), 50, 2, rng);
+
+  EXPECT_EQ(new_entity->GetData().seasons().at(1).group_id(), 1000);
 }
 
 TEST(TicketManagerTest, InSeasonTicketsKeepGroupId) {
