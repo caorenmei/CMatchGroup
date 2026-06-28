@@ -1,0 +1,33 @@
+# 构建产物
+/build/
+/cmake-build-*/
+/out/
+
+# Claude 本地配置
+.claude/
+
+# 编译数据库（由 CMake 生成，路径与机器相关，不提交）
+compile_commands.json
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cache/
+
+# 测试产物
+Testing/
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 包管理
+vcpkg_installed/
+conan/
+
+# 文档生成
+/docs/generated/

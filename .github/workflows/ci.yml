@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ libgtest-dev clang-format-21 clang-tidy-21
+
+      - name: 配置 CMake
+        run: cmake --preset ninja-debug
+
+      - name: 构建项目
+        run: cmake --build --preset ninja-debug
+
+      - name: 运行测试
+        run: ctest --preset ninja-debug --output-on-failure
+
+      - name: 检查代码格式
+        run: |
+          find src include tests -type f \( -name "*.cpp" -o -name "*.h" \) | xargs clang-format-21 --dry-run --Werror
+
+      - name: 静态分析
+        run: |
+          find src tests -type f -name "*.cpp" | xargs clang-tidy-21 -p build/debug

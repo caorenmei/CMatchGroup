@@ -1,0 +1,22 @@
+# 本地 pre-commit 配置
+# 使用方法：
+#   pip install pre-commit
+#   pre-commit install
+# 然后在每次 git commit 前会自动运行以下钩子
+
+repos:
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        entry: clang-format-21 --dry-run --Werror
+        language: system
+        files: '\.(cpp|h)$'
+        pass_filenames: true
+
+      - id: clang-tidy
+        name: clang-tidy
+        entry: clang-tidy-21 -p build/debug
+        language: system
+        files: '\.cpp$'
+        pass_filenames: true
