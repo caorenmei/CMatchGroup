@@ -3,6 +3,7 @@
 add_library(
   cmatch
   cmatch/math_utils.cpp
+  cmatch/ticket_manager.cpp
 )
 
 add_library(cmatch::cmatch ALIAS cmatch)

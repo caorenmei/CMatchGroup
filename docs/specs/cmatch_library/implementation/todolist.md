@@ -30,19 +30,19 @@
 - [x] 2.8 应用 `clang-format` 与 `clang-tidy`。
 - [ ] 2.9 提交变更，更新本文件状态。
 
-## [ ] 步骤 3：TicketManager 匹配算法
+## [x] 步骤 3：TicketManager 匹配算法
 
 ### 步骤内部进度
 
-- [ ] 3.1 梳理 `matching_algorithm.md` 与 `user_interface.md` 中 `TicketManager` 的职责。
-- [ ] 3.2 根据当前代码库状态（已存在接口与 mock）微调需求与验收条件。
-- [ ] 3.3 实现 `TicketManager` 构造函数与析构函数。
-- [ ] 3.4 实现 `BuildSeason`：加载完成后构建/修复赛季分组。
-- [ ] 3.5 实现 `NextSeason`：赛季切换与段位升降。
-- [ ] 3.6 实现 `AddTicket`：新凭据加入赛季分组。
-- [ ] 3.7 实现分组 ID 分配器、赛季判断、结算、分组、段位升降等私有辅助函数。
-- [ ] 3.8 编写单元测试覆盖：赛季判断、结算排名、分组 ID 唯一性、段位升降、随机分组。
-- [ ] 3.9 应用 `clang-format` 与 `clang-tidy`。
+- [x] 3.1 梳理 `matching_algorithm.md` 与 `user_interface.md` 中 `TicketManager` 的职责。
+- [x] 3.2 根据当前代码库状态（已存在接口与 mock）微调需求与验收条件。
+- [x] 3.3 实现 `TicketManager` 构造函数与析构函数。
+- [x] 3.4 实现 `BuildSeason`：加载完成后构建/修复赛季分组。
+- [x] 3.5 实现 `NextSeason`：赛季切换与段位升降。
+- [x] 3.6 实现 `AddTicket`：新凭据加入赛季分组。
+- [x] 3.7 实现分组 ID 分配器、赛季判断、结算、分组、段位升降等私有辅助函数。
+- [x] 3.8 编写单元测试覆盖：赛季判断、结算排名、分组 ID 唯一性、段位升降、随机分组。
+- [x] 3.9 应用 `clang-format` 与 `clang-tidy`。
 - [ ] 3.10 提交变更，更新本文件状态。
 
 ## [ ] 步骤 4：用户接口服务实现

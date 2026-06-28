@@ -48,3 +48,18 @@ target_link_libraries(
 )
 
 gtest_discover_tests(test_core_interfaces)
+
+# TicketManager 算法测试
+add_executable(
+  test_ticket_manager
+  cmatch/test_ticket_manager.cpp
+)
+
+target_link_libraries(
+  test_ticket_manager
+  PRIVATE
+  cmatch
+  GTest::gtest_main
+)
+
+gtest_discover_tests(test_ticket_manager)
