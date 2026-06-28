@@ -4,9 +4,7 @@
 
 #include <cstdint>
 #include <random>
-#include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 #include "cmatch/config.pb.h"
 #include "cmatch/season_config_interface.h"

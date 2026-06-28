@@ -562,7 +562,6 @@ TEST(TicketManagerTest, InSeasonTimeIsRepaired) {
   EXPECT_TRUE(manager.IsDirty(1));
 }
 
-
 TEST(TicketManagerTest, GroupIndexReturnsMembers) {
   testing::MockTicketEntityManager manager;
   TicketManager tm(manager);

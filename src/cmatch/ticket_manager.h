@@ -69,8 +69,8 @@ class TicketManager {
   /// @param[in] season_type 赛季类型
   /// @param[in] group_id 分组 ID
   /// @return 凭据 ID 列表（顺序不做保证）
-  std::vector<std::uint64_t> GetGroupTicketIds(
-      std::uint32_t season_type, std::uint64_t group_id) const;
+  std::vector<std::uint64_t> GetGroupTicketIds(std::uint32_t season_type,
+                                               std::uint64_t group_id) const;
 
  private:
   // 分组 ID 分配器，高 32 位为 zone_id，低 32 位为自增编号
