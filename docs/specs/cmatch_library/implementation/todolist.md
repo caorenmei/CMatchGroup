@@ -16,18 +16,18 @@
 - [x] 1.7 应用 `clang-format` 与 `clang-tidy`，确保无新增警告。
 - [ ] 1.8 提交变更，更新本文件状态。
 
-## [ ] 步骤 2：核心接口定义
+## [x] 步骤 2：核心接口定义
 
 ### 步骤内部进度
 
-- [ ] 2.1 梳理 `config.md`、`user_interface.md` 中的接口定义。
-- [ ] 2.2 根据当前代码库状态（已存在 Protobuf 生成代码）微调需求与验收条件。
-- [ ] 2.3 定义 `SeasonConfigInterface`（纯虚接口）。
-- [ ] 2.4 定义 `TicketEntityInterface` 与 `TicketEntityPtr`。
-- [ ] 2.5 定义 `TicketEntityManagerInterface`。
-- [ ] 2.6 提供基于内存的 mock 实现，供后续单元测试使用。
-- [ ] 2.7 编写接口行为测试，确认生命周期与引用正确。
-- [ ] 2.8 应用 `clang-format` 与 `clang-tidy`。
+- [x] 2.1 梳理 `config.md`、`user_interface.md` 中的接口定义。
+- [x] 2.2 根据当前代码库状态（已存在 Protobuf 生成代码）微调需求与验收条件。
+- [x] 2.3 定义 `SeasonConfigInterface`（纯虚接口）。
+- [x] 2.4 定义 `TicketEntityInterface` 与 `TicketEntityPtr`。
+- [x] 2.5 定义 `TicketEntityManagerInterface`。
+- [x] 2.6 提供基于内存的 mock 实现，供后续单元测试使用。
+- [x] 2.7 编写接口行为测试，确认生命周期与引用正确。
+- [x] 2.8 应用 `clang-format` 与 `clang-tidy`。
 - [ ] 2.9 提交变更，更新本文件状态。
 
 ## [ ] 步骤 3：TicketManager 匹配算法

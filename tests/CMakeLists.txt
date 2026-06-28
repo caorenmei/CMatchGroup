@@ -33,3 +33,18 @@ target_link_libraries(
 )
 
 gtest_discover_tests(test_protobuf_messages)
+
+# 核心接口测试
+add_executable(
+  test_core_interfaces
+  cmatch/test_core_interfaces.cpp
+)
+
+target_link_libraries(
+  test_core_interfaces
+  PRIVATE
+  cmatch
+  GTest::gtest_main
+)
+
+gtest_discover_tests(test_core_interfaces)
