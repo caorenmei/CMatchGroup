@@ -6,7 +6,7 @@ include(GoogleTest)
 # 示例测试可执行文件
 add_executable(
   test_math_utils
-  test_math_utils.cpp
+  cmatch/test_math_utils.cpp
 )
 
 target_link_libraries(
@@ -18,3 +18,18 @@ target_link_libraries(
 
 # 自动发现测试并注册到 CTest
 gtest_discover_tests(test_math_utils)
+
+# Protobuf 消息测试
+add_executable(
+  test_protobuf_messages
+  cmatch/test_protobuf_messages.cpp
+)
+
+target_link_libraries(
+  test_protobuf_messages
+  PRIVATE
+  cmatch
+  GTest::gtest_main
+)
+
+gtest_discover_tests(test_protobuf_messages)

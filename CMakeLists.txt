@@ -16,7 +16,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # 导出编译数据库，供 clang-tidy 等工具使用
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Protobuf 依赖
+find_package(Protobuf REQUIRED)
+
 # 子目录
+add_subdirectory(proto)
 add_subdirectory(src)
 
 # 启用 CTest 测试

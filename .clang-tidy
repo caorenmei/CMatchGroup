@@ -7,9 +7,10 @@ Checks: >
   portability-*,
   readability-*,
   -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
   -readability-named-parameter,
   -google-build-using-namespace
 
 WarningsAsErrors: ''
-HeaderFilterRegex: '.*'
+HeaderFilterRegex: '/(src|tests)/cmatch/'
 FormatStyle: file
