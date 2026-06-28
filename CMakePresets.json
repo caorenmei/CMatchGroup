@@ -48,6 +48,13 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "ninja-release",
+      "configurePreset": "ninja-release",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }
