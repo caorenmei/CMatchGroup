@@ -90,24 +90,23 @@ void TicketManager::InitializeSeasonType(
       continue;
     }
 
-    // 读取凭据上的赛季时间与段位，再修复时间
+    // 读取凭据上的赛季时间与段位
     config::SeasonTime group_time;
     group_time.set_begin_time(it->second.begin_time());
     group_time.set_end_time(it->second.end_time());
     const std::uint32_t grade = it->second.grade();
     const std::uint64_t group_id = it->second.group_id();
 
-    // 修复赛季时间：以配置为准
-    table::SeasonGroup& mutable_group =
-        (*ticket.mutable_seasons())[season_type];
-    if (mutable_group.begin_time() != season_time.begin_time() ||
-        mutable_group.end_time() != season_time.end_time()) {
-      mutable_group.set_begin_time(season_time.begin_time());
-      mutable_group.set_end_time(season_time.end_time());
-      entity_manager_.SetDirty(ticket.id());
-    }
-
     if (IsInSeason(now_time, group_time)) {
+      // 修复赛季时间：以配置为准
+      table::SeasonGroup& mutable_group =
+          (*ticket.mutable_seasons())[season_type];
+      if (mutable_group.begin_time() != season_time.begin_time() ||
+          mutable_group.end_time() != season_time.end_time()) {
+        mutable_group.set_begin_time(season_time.begin_time());
+        mutable_group.set_end_time(season_time.end_time());
+        entity_manager_.SetDirty(ticket.id());
+      }
       in_season_by_grade[grade].push_back(entity);
     } else {
       out_of_season_by_group[group_id].push_back(entity);
@@ -117,12 +116,10 @@ void TicketManager::InitializeSeasonType(
   // 当前赛季分组槽位：按段位维护若干分组，便于后续填入不在赛季内的凭据
   std::unordered_map<std::uint32_t, std::vector<GroupSlot>> grade_slots;
 
-  // 在当前赛季内的凭据：按当前段位重新分组
+  // 在当前赛季内的凭据：保留原分组，仅按段位收集
   for (auto& [grade, tickets] : in_season_by_grade) {
-    const config::GradeInfo* grade_info = FindGradeInfo(season_info, grade);
-    std::uint32_t group_size =
-        grade_info != nullptr ? grade_info->group_size() : 0;
-    FormGroupSlots(tickets, group_size, grade, rng, grade_slots[grade]);
+    (void)grade;
+    (void)tickets;
   }
 
   // 不在当前赛季内的凭据：按原分组结算并计算新段位

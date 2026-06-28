@@ -461,7 +461,7 @@ TEST(TicketManagerTest, AddTicketCreatesInitialGroup) {
   EXPECT_TRUE(manager.IsDirty(42));
 }
 
-TEST(TicketManagerTest, InitializeRegroupsInSeasonTickets) {
+TEST(TicketManagerTest, InSeasonTicketsKeepGroupId) {
   testing::MockTicketEntityManager manager;
   TicketManager tm(manager);
 
@@ -469,28 +469,67 @@ TEST(TicketManagerTest, InitializeRegroupsInSeasonTickets) {
   config::SeasonTime time = MakeSeasonTime(0, 100);
   std::mt19937 rng(12345);
 
-  for (std::uint64_t id = 1; id <= 4; ++id) {
-    auto entity = manager.GetOrCreateEntity(id, 1);
-    SetScore(entity, info.score_attr_id(), id * 10);
-    auto& group = (*entity->GetData().mutable_seasons())[1];
-    group.set_type(1);
-    group.set_begin_time(0);
-    group.set_end_time(100);
-    group.set_grade(1);
-    group.set_group_id(999);
-  }
+  auto entity = manager.GetOrCreateEntity(1, 1);
+  SetScore(entity, info.score_attr_id(), 100);
+  auto& group = (*entity->GetData().mutable_seasons())[1];
+  group.set_type(1);
+  group.set_begin_time(0);
+  group.set_end_time(100);
+  group.set_grade(1);
+  group.set_group_id(12345);
 
   tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
-  // Should be reassigned to new unique group ids
-  std::unordered_set<std::uint64_t> group_ids;
-  for (const auto& [id, entity] : manager.GetEntities()) {
-    (void)id;
-    group_ids.insert(entity->GetData().seasons().at(1).group_id());
-  }
-  EXPECT_GT(group_ids.size(), 1);
-  EXPECT_EQ(group_ids.count(999), 0);
+  EXPECT_EQ(entity->GetData().seasons().at(1).group_id(), 12345);
 }
+
+TEST(TicketManagerTest, OutOfSeasonTicketsGetNewGroupId) {
+  testing::MockTicketEntityManager manager;
+  TicketManager tm(manager);
+
+  config::SeasonInfo info = MakeSeasonInfo(1);
+  config::SeasonTime time = MakeSeasonTime(0, 100);
+  std::mt19937 rng(12345);
+
+  auto entity = manager.GetOrCreateEntity(1, 1);
+  SetScore(entity, info.score_attr_id(), 100);
+  auto& group = (*entity->GetData().mutable_seasons())[1];
+  group.set_type(1);
+  group.set_begin_time(0);
+  group.set_end_time(50);
+  group.set_grade(1);
+  group.set_group_id(12345);
+
+  tm.Initialize(MakeMockConfig(info, time), 75, rng);
+
+  EXPECT_NE(entity->GetData().seasons().at(1).group_id(), 12345);
+}
+
+TEST(TicketManagerTest, InSeasonTimeIsRepaired) {
+  testing::MockTicketEntityManager manager;
+  TicketManager tm(manager);
+
+  config::SeasonInfo info = MakeSeasonInfo(1);
+  config::SeasonTime time = MakeSeasonTime(0, 100);
+  std::mt19937 rng(12345);
+
+  auto entity = manager.GetOrCreateEntity(1, 1);
+  SetScore(entity, info.score_attr_id(), 100);
+  auto& group = (*entity->GetData().mutable_seasons())[1];
+  group.set_type(1);
+  group.set_begin_time(10);
+  group.set_end_time(90);
+  group.set_grade(1);
+  group.set_group_id(12345);
+
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
+
+  const auto& repaired = entity->GetData().seasons().at(1);
+  EXPECT_EQ(repaired.begin_time(), time.begin_time());
+  EXPECT_EQ(repaired.end_time(), time.end_time());
+  EXPECT_TRUE(manager.IsDirty(1));
+}
+
 
 TEST(TicketManagerTest, NextSeasonProducesSettlements) {
   testing::MockTicketEntityManager manager;

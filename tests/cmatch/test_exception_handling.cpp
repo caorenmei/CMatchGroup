@@ -172,9 +172,12 @@ TEST(ExceptionHandlingTest, OutOfSeasonTicketsAreSettledAndAdded) {
   const auto& settlement = out_of_season->GetData().settlements().at(1);
   EXPECT_EQ(settlement.rank(), 1);  // higher score
 
-  // Both should now be in the same current season group for grade 1
-  EXPECT_EQ(in_season->GetData().seasons().at(1).group_id(),
-            out_of_season->GetData().seasons().at(1).group_id());
+  // In-season ticket keeps its original group; out-of-season ticket gets a new
+  // current-season group.
+  EXPECT_EQ(in_season->GetData().seasons().at(1).group_id(), 1000);
+  EXPECT_NE(out_of_season->GetData().seasons().at(1).group_id(), 1000);
+  EXPECT_NE(out_of_season->GetData().seasons().at(1).group_id(),
+            in_season->GetData().seasons().at(1).group_id());
   EXPECT_EQ(in_season->GetData().seasons().at(1).grade(), 1);
   EXPECT_EQ(out_of_season->GetData().seasons().at(1).grade(), 1);
 }
