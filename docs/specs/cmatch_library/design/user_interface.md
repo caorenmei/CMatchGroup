@@ -219,8 +219,8 @@ message RemoveSettlementListReq
 {
     // 凭据ID
     uint64 id = 1;
-    // 结算ID列表
-    repeated uint64 settlement_ids = 2;
+    // 结算ID列表，实际对应赛季类型
+    repeated uint32 settlement_ids = 2;
 }
 
 // 删除结算列表响应
@@ -321,9 +321,8 @@ class TicketManager
 public:
     explicit TicketManager(TicketEntityManagerInterface& entity_manager);
 
-    // 当 TicketEntityManagerInterface 加载完成时调用。由外部根据 SeasonConfigInterface::GetTypes() 遍历每个赛事类型调用一次。
-    void BuildSeason(const config::SeasonInfo& season_info,
-        const config::SeasonTime& season_time,
+    // 当 TicketEntityManagerInterface 加载完成时调用一次。内部遍历 SeasonConfigInterface::GetTypes() 所有赛事类型完成初始化。
+    void Initialize(const SeasonConfigInterface& config,
         std::uint32_t now_time,
         std::mt19937& rng);
     // 切换赛季
@@ -331,9 +330,8 @@ public:
         const config::SeasonTime& season_time,
         std::uint32_t now_time,
         std::mt19937& rng);
-    // 新加入的凭据，需要在赛季中进行分组。由外部根据 SeasonConfigInterface::GetTypes() 遍历每个赛事类型调用一次。
-    void AddTicket(const config::SeasonInfo& season_info,
-        const config::SeasonTime& season_time,
+    // 新加入的凭据，由外部调用一次。内部遍历 SeasonConfigInterface::GetTypes() 所有赛事类型完成分组；优先填入同段位未满旧分组，否则创建新分组。
+    void AddTicket(const SeasonConfigInterface& config,
         std::uint32_t now_time,
         std::uint64_t ticket_id,
         std::mt19937& rng);

@@ -39,8 +39,6 @@ message SeasonInfo
     map<uint32, GradeInfo> grades = 2;
     // 初始积分
     uint64 initial_score = 3;
-    // 最小积分
-    uint64 min_score = 4;
     // 积分的属性ID
     uint32 score_attr_id = 5;
     // 切换赛季后是否重置积分
