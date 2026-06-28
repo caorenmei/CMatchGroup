@@ -302,7 +302,9 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
 
       // 验证该组中其余凭据留在原段位
       for (std::uint64_t id : members) {
-        if (id == promoted_id) continue;
+        if (id == promoted_id) {
+          continue;
+        }
         auto e = manager_->GetEntity(id);
         ASSERT_NE(e, nullptr);
         EXPECT_EQ(e->GetData().seasons().at(1).grade(), 1)
