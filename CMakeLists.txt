@@ -16,9 +16,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # 导出编译数据库，供 clang-tidy 等工具使用
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# 标准安装路径
-include(GNUInstallDirs)
-
 # 包含目录
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -28,36 +25,3 @@ add_subdirectory(src)
 # 启用 CTest 测试
 enable_testing()
 add_subdirectory(tests)
-
-# 安装导出的 CMake 包配置
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-  "${PROJECT_SOURCE_DIR}/cmake/CMatchGroupConfig.cmake.in"
-  "${PROJECT_BINARY_DIR}/CMatchGroupConfig.cmake"
-  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CMatchGroup"
-)
-
-write_basic_package_version_file(
-  "${PROJECT_BINARY_DIR}/CMatchGroupConfigVersion.cmake"
-  VERSION "${PROJECT_VERSION}"
-  COMPATIBILITY SameMajorVersion
-)
-
-install(
-  FILES
-  "${PROJECT_BINARY_DIR}/CMatchGroupConfig.cmake"
-  "${PROJECT_BINARY_DIR}/CMatchGroupConfigVersion.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CMatchGroup"
-)
-
-# Doxygen 文档生成目标（可选）
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-  add_custom_target(
-    docs
-    COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Doxyfile
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-    COMMENT "使用 Doxygen 生成项目文档"
-    VERBATIM
-  )
-endif()
