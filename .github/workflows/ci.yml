@@ -9,8 +9,6 @@ on:
 jobs:
   ubuntu-debug:
     runs-on: ubuntu-latest
-    env:
-      LLVM_PROFILE_FILE: "coverage-%p.profraw"
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -29,30 +27,33 @@ jobs:
       - name: 构建项目
         run: cmake --build --preset ninja-debug
 
-      - name: 运行测试
-        run: ctest --preset ninja-debug --output-on-failure
+      - name: 运行测试并生成覆盖率数据
+        working-directory: build/debug
+        run: |
+          LLVM_PROFILE_FILE=coverage-%p.profraw ./tests/test_math_utils
 
       - name: 生成覆盖率报告
+        working-directory: build/debug
         run: |
           llvm-profdata-18 merge -sparse coverage-*.profraw -o coverage.profdata
           llvm-cov-18 report \
             -instr-profile=coverage.profdata \
-            build/debug/tests/test_math_utils \
-            src/math_utils.cpp \
-            include/math_utils.h
+            tests/test_math_utils \
+            ../../src/math_utils.cpp \
+            ../../include/math_utils.h
           llvm-cov-18 show \
             -instr-profile=coverage.profdata \
             -format=html \
             -output-dir=coverage-report \
-            build/debug/tests/test_math_utils \
-            src/math_utils.cpp \
-            include/math_utils.h
+            tests/test_math_utils \
+            ../../src/math_utils.cpp \
+            ../../include/math_utils.h
 
       - name: 上传覆盖率报告
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage-report/
+          path: build/debug/coverage-report/
 
       - name: 检查代码格式
         run: |
