@@ -257,6 +257,7 @@ public:
     // 删除结算列表
     void RemoveSettlementList(const std::shared_ptr<RemoveSettlementListReq>& request, std::function<void(const RemoveSettlementListResp&)> done) = 0;
 }
+```
 
 ### 实体和实体管理器
 
