@@ -55,9 +55,9 @@ struct GroupSlot {
 TicketManager::TicketManager(TicketEntityManagerInterface& entity_manager)
     : entity_manager_(entity_manager) {}
 
-void TicketManager::BuildSeason(const config::SeasonInfo& season_info,
-                                const config::SeasonTime& season_time,
-                                std::uint32_t now_time, std::mt19937& rng) {
+void TicketManager::Initialize(const config::SeasonInfo& season_info,
+                               const config::SeasonTime& season_time,
+                               std::uint32_t now_time, std::mt19937& rng) {
   group_id_allocator_.Initialize(entity_manager_.GetEntities());
 
   const std::uint32_t season_type = season_info.type();

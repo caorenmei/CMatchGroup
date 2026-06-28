@@ -37,9 +37,9 @@ class TicketManager {
   /// @param[in] season_time 赛季时间
   /// @param[in] now_time 当前时间
   /// @param[in,out] rng 随机数引擎
-  void BuildSeason(const config::SeasonInfo& season_info,
-                   const config::SeasonTime& season_time,
-                   std::uint32_t now_time, std::mt19937& rng);
+  void Initialize(const config::SeasonInfo& season_info,
+                  const config::SeasonTime& season_time,
+                  std::uint32_t now_time, std::mt19937& rng);
 
   /// @brief 切换赛季
   ///

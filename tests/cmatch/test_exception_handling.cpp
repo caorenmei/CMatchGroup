@@ -83,7 +83,7 @@ TEST(ExceptionHandlingTest, RepairsSeasonTimeMismatch) {
   }
 
   std::mt19937 rng(12345);
-  tm.BuildSeason(info, config_time, 150, rng);
+  tm.Initialize(info, config_time, 150, rng);
 
   const auto& group = entity->GetData().seasons().at(1);
   EXPECT_EQ(group.begin_time(), config_time.begin_time());
@@ -126,7 +126,7 @@ TEST(ExceptionHandlingTest, OutOfSeasonTicketsAreSettledAndAdded) {
   }
 
   std::mt19937 rng(12345);
-  tm.BuildSeason(info, new_time, 150, rng);
+  tm.Initialize(info, new_time, 150, rng);
 
   // Out-of-season ticket should be settled and then grouped in current season
   ASSERT_EQ(out_of_season->GetData().settlements().count(1), 1);
@@ -176,7 +176,7 @@ TEST(ExceptionHandlingTest, AlreadySettledTicketsAreNotOverwritten) {
   }
 
   std::mt19937 rng(12345);
-  tm.BuildSeason(info, new_time, 150, rng);
+  tm.Initialize(info, new_time, 150, rng);
 
   // entity1 settlement should remain unchanged
   EXPECT_EQ(entity1->GetData().settlements().at(1).rank(), 99);
@@ -268,7 +268,7 @@ TEST(ExceptionHandlingTest, MergedServerGroupIdsDoNotConflict) {
 
   // Both are in season, will be regrouped with new unique IDs
   std::mt19937 rng(12345);
-  tm.BuildSeason(info, time, 50, rng);
+  tm.Initialize(info, time, 50, rng);
 
   std::unordered_set<std::uint64_t> group_ids;
   for (const auto& [id, entity] : manager.GetEntities()) {

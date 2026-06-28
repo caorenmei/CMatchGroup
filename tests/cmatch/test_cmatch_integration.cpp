@@ -206,7 +206,7 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
   // 7. 调用 BuildSeason 构建分组（通过 TicketManager 直接调用）
   {
     std::mt19937 rng(12345);
-    ticket_manager_->BuildSeason(info, time, 50, rng);
+    ticket_manager_->Initialize(info, time, 50, rng);
   }
 
   // 记录 BuildSeason 后的分组，用于后续验证段位升降
@@ -352,7 +352,7 @@ TEST_F(CMatchIntegrationTest, NextSeasonResetsScoreWhenConfigured) {
   // 构建分组
   {
     std::mt19937 rng(12345);
-    ticket_manager_->BuildSeason(info, time, 50, rng);
+    ticket_manager_->Initialize(info, time, 50, rng);
   }
 
   // 模拟时间推进，调用 NextSeason 切换赛季
@@ -389,7 +389,7 @@ TEST_F(CMatchIntegrationTest, BuildSeasonWithNoTicketsDoesNotCrash) {
   config_->AddSeason(info, time);
 
   std::mt19937 rng(12345);
-  ticket_manager_->BuildSeason(info, time, 50, rng);
+  ticket_manager_->Initialize(info, time, 50, rng);
 
   // 验证没有凭据存在，且未发生崩溃
   EXPECT_EQ(manager_->GetEntities().size(), 0);
@@ -419,7 +419,7 @@ TEST_F(CMatchIntegrationTest, MergedServerGroupIdUniqueness) {
 
   // 构建分组
   std::mt19937 rng(12345);
-  ticket_manager_->BuildSeason(info, time, 50, rng);
+  ticket_manager_->Initialize(info, time, 50, rng);
 
   // 验证所有分组 ID 唯一，且每个分组内的凭据均来自同一 zone
   std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> group_members;
@@ -475,7 +475,7 @@ TEST_F(CMatchIntegrationTest, CrossSeasonRepairAfterTimeMismatch) {
 
   // 调用 BuildSeason 修复时间不一致
   std::mt19937 rng(12345);
-  ticket_manager_->BuildSeason(info, new_time, 150, rng);
+  ticket_manager_->Initialize(info, new_time, 150, rng);
 
   // 验证凭据时间已被修复为新的配置时间，并获得结算记录与重新分组
   auto entity = manager_->GetEntity(1);
