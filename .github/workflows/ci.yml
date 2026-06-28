@@ -7,8 +7,10 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  ubuntu-debug:
     runs-on: ubuntu-latest
+    env:
+      LLVM_PROFILE_FILE: "coverage-%p.profraw"
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -16,16 +18,40 @@ jobs:
       - name: 安装依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++ libgtest-dev clang-format-21 clang-tidy-21
+          sudo apt-get install -y cmake ninja-build g++ libgtest-dev llvm-21 clang-format-21 clang-tidy-21
 
       - name: 配置 CMake
-        run: cmake --preset ninja-debug
+        run: |
+          cmake --preset ninja-debug \
+            -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
 
       - name: 构建项目
         run: cmake --build --preset ninja-debug
 
       - name: 运行测试
         run: ctest --preset ninja-debug --output-on-failure
+
+      - name: 生成覆盖率报告
+        run: |
+          llvm-profdata-21 merge -sparse coverage-*.profraw -o coverage.profdata
+          llvm-cov-21 report \
+            -instr-profile=coverage.profdata \
+            build/debug/tests/test_math_utils \
+            src/math_utils.cpp \
+            include/math_utils.h
+          llvm-cov-21 show \
+            -instr-profile=coverage.profdata \
+            -format=html \
+            -output-dir=coverage-report \
+            build/debug/tests/test_math_utils \
+            src/math_utils.cpp \
+            include/math_utils.h
+
+      - name: 上传覆盖率报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report/
 
       - name: 检查代码格式
         run: |
@@ -34,3 +60,51 @@ jobs:
       - name: 静态分析
         run: |
           find src tests -type f -name "*.cpp" | xargs clang-tidy-21 -p build/debug
+
+  ubuntu-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ libgtest-dev
+
+      - name: 配置 CMake
+        run: cmake --preset ninja-release
+
+      - name: 构建项目
+        run: cmake --build --preset ninja-release
+
+      - name: 运行测试
+        run: ctest --preset ninja-release --output-on-failure
+
+  windows-release:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: 安装 gtest
+        run: |
+          vcpkg install gtest:x64-windows
+
+      - name: 配置 CMake
+        run: |
+          cmake -S . -B build/win-release `
+            -G "Visual Studio 17 2022" `
+            -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_CXX_STANDARD=20 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+
+      - name: 构建项目
+        run: cmake --build build/win-release --config Release
+
+      - name: 运行测试
+        run: ctest --test-dir build/win-release --build-config Release --output-on-failure
