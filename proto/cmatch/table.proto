@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package cmatch.table;
+
+// 凭据信息
+message Ticket {
+  // 凭据 ID
+  uint64 id = 1;
+  // 区域 ID
+  uint32 zone_id = 2;
+  // 凭据自增编号
+  uint32 auto_id = 3;
+  // 属性列表
+  map<uint32, uint64> attributes = 4;
+  // 报名的赛事类型列表
+  repeated uint32 registrations = 5;
+  // 赛季分组，key 为赛事类型
+  map<uint32, SeasonGroup> seasons = 6;
+  // 结算信息，key 为赛事类型
+  map<uint32, SeasonSettlement> settlements = 7;
+}
+
+// 赛季分组
+message SeasonGroup {
+  // 赛事类型
+  uint32 type = 1;
+  // 赛季开始时间
+  uint64 begin_time = 2;
+  // 赛季结束时间
+  uint64 end_time = 3;
+  // 段位编号
+  uint32 grade = 4;
+  // 分组编号
+  uint64 group_id = 5;
+}
+
+// 结算信息
+message SeasonSettlement {
+  // 赛事类型
+  uint32 type = 1;
+  // 赛季开始时间
+  uint64 begin_time = 2;
+  // 赛季结束时间
+  uint64 end_time = 3;
+  // 段位编号
+  uint32 grade = 4;
+  // 分组编号
+  uint64 group_id = 5;
+  // 结算排名
+  uint32 rank = 6;
+  // 结算排名百分比
+  float rank_percent = 7;
+  // 结算积分
+  uint64 score = 8;
+}
