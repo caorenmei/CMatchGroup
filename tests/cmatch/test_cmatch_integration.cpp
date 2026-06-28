@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -32,10 +33,11 @@ class MockSeasonConfig : public SeasonConfigInterface {
 
   std::vector<std::uint32_t> GetTypes() const override {
     std::vector<std::uint32_t> types;
+    types.reserve(infos_.size());
     for (const auto& [type, _] : infos_) {
-      (void)_;
       types.push_back(type);
     }
+    std::sort(types.begin(), types.end());
     return types;
   }
 
@@ -180,7 +182,21 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
     EXPECT_EQ(entity->GetData().attributes().at(1), id * 100);
   }
 
-  // 6. 调用 RegisterSeason 为凭据报名赛事（已在 SubmitTicket 中报名，额外验证）
+  // 6. 调用 RegisterSeason 为未在 SubmitTicket 中报名的凭据报名（id=5
+  // 未提交过）
+  {
+    auto req = std::make_shared<lib::RegisterSeasonReq>();
+    req->set_id(5);
+    req->add_types(1);
+
+    lib::RegisterSeasonResp resp;
+    service_->RegisterSeason(
+        req, [&resp](const lib::RegisterSeasonResp& r) { resp = r; });
+    // 凭据不存在，应返回错误
+    EXPECT_NE(resp.result(), lib::OK);
+  }
+
+  // 为已存在的凭据报名（id=1 已在 SubmitTicket 中报名，验证幂等性）
   {
     auto req = std::make_shared<lib::RegisterSeasonReq>();
     req->set_id(1);
@@ -198,9 +214,27 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
     ticket_manager_->BuildSeason(info, time, 50, rng);
   }
 
-  // 8. 调用 GetGroupMembers 验证分组成员
+  // 8. 调用 GetGroupMembers 验证分组成员（group_size=2，4 个凭据应分为 2
+  // 组，每组 2 人）
   {
-    // 获取第一个凭据的分组 ID
+    // 收集所有凭据的分组 ID 并统计每组人数
+    std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> group_members;
+    for (std::uint64_t id = 1; id <= 4; ++id) {
+      auto entity = manager_->GetEntity(id);
+      ASSERT_NE(entity, nullptr);
+      std::uint64_t group_id = entity->GetData().seasons().at(1).group_id();
+      group_members[group_id].push_back(id);
+    }
+
+    // 验证共有 2 个分组，每组恰好 2 个成员
+    EXPECT_EQ(group_members.size(), 2);
+    for (const auto& [group_id, members] : group_members) {
+      (void)group_id;
+      EXPECT_EQ(members.size(), 2)
+          << "分组 ID " << group_id << " 的成员数应为 2";
+    }
+
+    // 验证通过 GetGroupMembers 接口获取第一个凭据所在组的成员
     auto entity = manager_->GetEntity(1);
     ASSERT_NE(entity, nullptr);
     std::uint64_t group_id = entity->GetData().seasons().at(1).group_id();
@@ -214,7 +248,6 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
         req, [&resp](const lib::GetGroupMembersResp& r) { resp = r; });
 
     EXPECT_EQ(resp.result(), lib::OK);
-    // group_size = 2，每组应有 2 个成员
     EXPECT_EQ(resp.members().size(), 2);
   }
 
@@ -255,6 +288,50 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
     // 未配置 reset_score，积分应保持不变
     EXPECT_EQ(entity1->GetData().attributes().at(1), 100);
     EXPECT_EQ(entity4->GetData().attributes().at(1), 400);
+  }
+}
+
+// R6.1 端到端集成测试：验证 reset_score=true 时积分重置行为
+TEST_F(CMatchIntegrationTest, NextSeasonResetsScoreWhenConfigured) {
+  config::SeasonInfo info = MakeSeasonInfo(1);
+  info.set_reset_score(true);
+  info.set_initial_score(1000);
+  config::SeasonTime time = MakeSeasonTime(0, 100);
+  config_->AddSeason(info, time);
+
+  // 提交凭据并设置积分
+  for (std::uint64_t id = 1; id <= 4; ++id) {
+    auto req = std::make_shared<lib::SubmitTicketReq>();
+    req->mutable_ticket()->set_id(id);
+    req->mutable_ticket()->set_zone_id(1);
+    (*req->mutable_ticket()->mutable_attributes())[1] = id * 100;
+    req->add_registrations(1);
+
+    lib::SubmitTicketResp resp;
+    service_->SubmitTicket(
+        req, [&resp](const lib::SubmitTicketResp& r) { resp = r; });
+    EXPECT_EQ(resp.result(), lib::OK);
+  }
+
+  // 构建分组
+  {
+    std::mt19937 rng(12345);
+    ticket_manager_->BuildSeason(info, time, 50, rng);
+  }
+
+  // 模拟时间推进，调用 NextSeason 切换赛季
+  {
+    config::SeasonTime new_time = MakeSeasonTime(100, 200);
+    std::mt19937 rng(12345);
+    ticket_manager_->NextSeason(info, new_time, 150, rng);
+  }
+
+  // 验证所有凭据的积分已被重置为 initial_score
+  for (std::uint64_t id = 1; id <= 4; ++id) {
+    auto entity = manager_->GetEntity(id);
+    ASSERT_NE(entity, nullptr);
+    EXPECT_EQ(entity->GetData().attributes().at(1), 1000)
+        << "凭据 " << id << " 的积分应被重置为 initial_score";
   }
 }
 
@@ -313,8 +390,8 @@ TEST_F(CMatchIntegrationTest, MergedServerGroupIdUniqueness) {
   for (const auto& [id, entity] : manager_->GetEntities()) {
     (void)id;
     std::uint64_t group_id = entity->GetData().seasons().at(1).group_id();
-    EXPECT_EQ(group_ids.count(group_id), 0) << "分组 ID 重复: " << group_id;
-    group_ids.insert(group_id);
+    ASSERT_TRUE(group_ids.insert(group_id).second)
+        << "分组 ID 重复: " << group_id;
   }
   EXPECT_EQ(group_ids.size(), 3);
 }
