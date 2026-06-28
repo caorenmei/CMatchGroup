@@ -227,7 +227,7 @@ TEST(TicketManagerTest, GroupIdUniquenessAcrossZonesAndSettlements) {
   // Add a new ticket: allocator must start after sequence 5
   auto entity3 = manager.GetOrCreateEntity(3, 1);
   SetScore(entity3, info.score_attr_id(), 100);
-  tm.AddTicket(MakeMockConfig(info, time), 50, 3, rng);
+  tm.AddTicket(MakeMockConfig(info, time), 3, rng);
 
   const auto new_group_id =
       manager.GetEntity(3)->GetData().seasons().at(1).group_id();
@@ -448,7 +448,7 @@ TEST(TicketManagerTest, AddTicketCreatesInitialGroup) {
   auto entity = manager.GetOrCreateEntity(42, 5);
   SetScore(entity, info.score_attr_id(), 100);
 
-  tm.AddTicket(MakeMockConfig(info, time), 50, 42, rng);
+  tm.AddTicket(MakeMockConfig(info, time), 42, rng);
 
   const auto& ticket = entity->GetData();
   ASSERT_EQ(ticket.seasons().count(1), 1);
@@ -488,7 +488,7 @@ TEST(TicketManagerTest, AddTicketFillsUnfilledGroupFirst) {
   // 新凭据应加入 group 1000
   auto new_entity = manager.GetOrCreateEntity(2, 1);
   SetScore(new_entity, info.score_attr_id(), 200);
-  tm.AddTicket(MakeMockConfig(info, time), 50, 2, rng);
+  tm.AddTicket(MakeMockConfig(info, time), 2, rng);
 
   EXPECT_EQ(new_entity->GetData().seasons().at(1).group_id(), 1000);
 }

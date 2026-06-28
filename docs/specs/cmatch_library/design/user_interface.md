@@ -330,9 +330,10 @@ public:
         const config::SeasonTime& season_time,
         std::uint32_t now_time,
         std::mt19937& rng);
-    // 新加入的凭据，由外部调用一次。内部遍历 SeasonConfigInterface::GetTypes() 所有赛事类型完成分组；优先填入同段位未满旧分组，否则创建新分组。
+    // 新加入的凭据，由外部调用一次。断言新凭据上不存在任何赛季分组数据；
+    // 内部遍历 SeasonConfigInterface::GetTypes() 所有赛事类型完成分组；
+    // 优先填入同段位未满旧分组，否则创建新分组。
     void AddTicket(const SeasonConfigInterface& config,
-        std::uint32_t now_time,
         std::uint64_t ticket_id,
         std::mt19937& rng);
 
@@ -346,7 +347,7 @@ public:
 ### 赛季时间修复语义
 
 - `Initialize` 仅在凭据上的时间位于当前赛季内时，才将其修复为配置的赛季时间。
-- `AddTicket` 对已存在赛季分组的凭据，同样仅在当前赛季内修复时间。
+- `AddTicket` 仅处理新加入且不存在赛季分组数据的凭据，因此不涉及赛季时间修复。
 
 ## 相关文档
 

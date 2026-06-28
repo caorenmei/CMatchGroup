@@ -57,13 +57,12 @@ class TicketManager {
   /// @brief 新加入的凭据，由外部调用一次
   ///
   /// 内部遍历所有已配置的赛事类型，为凭据分配初始段位并优先填入同段位未满旧分组；
-  /// 若已存在赛季分组且凭据上的时间位于当前赛季内，则修复其时间为配置值。
+  /// 断言新凭据上不存在任何赛季分组数据。
   /// @param[in] config 赛季配置接口
-  /// @param[in] now_time 当前时间
   /// @param[in] ticket_id 新凭据 ID
   /// @param[in,out] rng 随机数引擎
-  void AddTicket(const SeasonConfigInterface& config, std::uint32_t now_time,
-                 std::uint64_t ticket_id, std::mt19937& rng);
+  void AddTicket(const SeasonConfigInterface& config, std::uint64_t ticket_id,
+                 std::mt19937& rng);
 
   /// @brief 获取指定分组内的凭据 ID 列表
   /// @param[in] season_type 赛季类型
@@ -147,13 +146,25 @@ class TicketManager {
   /// @param[in] season_type 赛季类型
   /// @param[in] season_info 赛季信息
   /// @param[in] season_time 赛季时间
-  /// @param[in] now_time 当前时间
   /// @param[in,out] rng 随机数引擎
   void AddTicketToSeason(const TicketEntityPtr& entity,
                          std::uint32_t season_type,
                          const config::SeasonInfo& season_info,
                          const config::SeasonTime& season_time,
-                         std::uint32_t now_time, std::mt19937& rng);
+                         std::mt19937& rng);
+
+  /// @brief 将单个凭据按指定段位分配到同段位未满旧分组，或创建新分组
+  /// @param[in] entity 凭据实体
+  /// @param[in] season_type 赛季类型
+  /// @param[in] grade 目标段位
+  /// @param[in] season_info 赛季信息
+  /// @param[in] season_time 新赛季时间
+  /// @param[in,out] rng 随机数引擎
+  void AssignTicketToGradeGroup(const TicketEntityPtr& entity,
+                                std::uint32_t season_type, std::uint32_t grade,
+                                const config::SeasonInfo& season_info,
+                                const config::SeasonTime& season_time,
+                                std::mt19937& rng);
 
   // 用于 pair 键的哈希辅助结构
   struct PairHash {
