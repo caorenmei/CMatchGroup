@@ -93,3 +93,18 @@ target_link_libraries(
 )
 
 gtest_discover_tests(test_exception_handling)
+
+# 端到端与边界场景集成测试
+add_executable(
+  test_cmatch_integration
+  cmatch/test_cmatch_integration.cpp
+)
+
+target_link_libraries(
+  test_cmatch_integration
+  PRIVATE
+  cmatch
+  GTest::gtest_main
+)
+
+gtest_discover_tests(test_cmatch_integration)
