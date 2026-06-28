@@ -74,7 +74,6 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
   config::SeasonInfo info;
   info.set_type(season_type);
   info.set_initial_score(1000);
-  info.set_min_score(0);
   info.set_score_attr_id(1);
   info.set_reset_score(false);
   info.set_initial_grade(1);
