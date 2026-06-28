@@ -35,7 +35,7 @@ class MockSeasonConfig : public SeasonConfigInterface {
 };
 
 TEST(TicketEntityInterfaceTest, MockEntityBehavior) {
-  testing::MockTicketEntity entity(42, 1);
+  auto entity = testing::MockTicketEntity{42, 1};
   EXPECT_EQ(entity.GetKey(), 42);
   EXPECT_TRUE(entity.IsFull());
 
@@ -44,25 +44,25 @@ TEST(TicketEntityInterfaceTest, MockEntityBehavior) {
 }
 
 TEST(TicketEntityManagerInterfaceTest, GetOrCreateEntity) {
-  testing::MockTicketEntityManager manager;
+  auto manager = testing::MockTicketEntityManager{};
 
-  TicketEntityPtr entity = manager.GetOrCreateEntity(100, 1);
+  auto entity = manager.GetOrCreateEntity(100, 1);
   ASSERT_NE(entity, nullptr);
   EXPECT_EQ(entity->GetKey(), 100);
   EXPECT_EQ(entity->GetData().zone_id(), 1);
 
-  TicketEntityPtr same = manager.GetOrCreateEntity(100, 2);
+  auto same = manager.GetOrCreateEntity(100, 2);
   EXPECT_EQ(same, entity);
   EXPECT_EQ(entity->GetData().zone_id(), 1);
 }
 
 TEST(TicketEntityManagerInterfaceTest, GetEntityMissing) {
-  testing::MockTicketEntityManager manager;
+  auto manager = testing::MockTicketEntityManager{};
   EXPECT_EQ(manager.GetEntity(999), nullptr);
 }
 
 TEST(TicketEntityManagerInterfaceTest, GetEntitiesAndDirty) {
-  testing::MockTicketEntityManager manager;
+  auto manager = testing::MockTicketEntityManager{};
 
   manager.GetOrCreateEntity(1, 1);
   manager.GetOrCreateEntity(2, 1);
@@ -74,7 +74,7 @@ TEST(TicketEntityManagerInterfaceTest, GetEntitiesAndDirty) {
 }
 
 TEST(TicketEntityManagerInterfaceTest, IsLoaded) {
-  testing::MockTicketEntityManager manager;
+  auto manager = testing::MockTicketEntityManager{};
   EXPECT_TRUE(manager.IsLoaded());
 
   manager.SetLoaded(false);
@@ -82,18 +82,18 @@ TEST(TicketEntityManagerInterfaceTest, IsLoaded) {
 }
 
 TEST(SeasonConfigInterfaceTest, MockConfigBehavior) {
-  MockSeasonConfig config;
+  auto config = MockSeasonConfig{};
 
-  std::vector<std::uint32_t> types = config.GetTypes();
+  auto types = config.GetTypes();
   ASSERT_EQ(types.size(), 2);
   EXPECT_EQ(types[0], 1);
   EXPECT_EQ(types[1], 2);
 
-  config::SeasonInfo info;
+  auto info = config::SeasonInfo{};
   EXPECT_TRUE(config.GetInfo(1, info));
   EXPECT_EQ(info.type(), 1);
 
-  config::SeasonTime time;
+  auto time = config::SeasonTime{};
   EXPECT_TRUE(config.GetTime(1, time));
   EXPECT_EQ(time.begin_time(), 1000);
   EXPECT_EQ(time.end_time(), 2000);

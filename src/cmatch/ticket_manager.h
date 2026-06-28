@@ -79,7 +79,7 @@ class TicketManager {
 
     void Initialize(
         const std::unordered_map<std::uint64_t, TicketEntityPtr>& entities) {
-      std::uint32_t max_sequence = 0;
+      auto max_sequence = std::uint32_t{0};
       for (const auto& [id, entity] : entities) {
         (void)id;
         const auto& ticket = entity->GetData();
@@ -98,7 +98,7 @@ class TicketManager {
     }
 
     std::uint64_t Allocate(std::uint32_t zone_id) {
-      std::uint64_t group_id =
+      auto group_id =
           (static_cast<std::uint64_t>(zone_id) << 32) | next_sequence_;
       ++next_sequence_;
       return group_id;

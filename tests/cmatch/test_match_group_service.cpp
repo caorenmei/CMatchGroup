@@ -49,7 +49,7 @@ class MockSeasonConfig : public SeasonConfigInterface {
 };
 
 config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
-  config::SeasonInfo info;
+  auto info = config::SeasonInfo{};
   info.set_type(season_type);
   info.set_initial_score(1000);
   info.set_score_attr_id(1);
@@ -57,7 +57,7 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
   info.set_initial_grade(1);
 
   {
-    config::GradeInfo grade;
+    auto grade = config::GradeInfo{};
     grade.set_grade(1);
     grade.set_prev_grade(1);
     grade.set_next_grade(2);
@@ -73,7 +73,7 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
 }
 
 config::SeasonTime MakeSeasonTime(std::uint64_t begin, std::uint64_t end) {
-  config::SeasonTime time;
+  auto time = config::SeasonTime{};
   time.set_begin_time(begin);
   time.set_end_time(end);
   return time;
@@ -102,7 +102,7 @@ class MatchGroupServiceTest : public ::testing::Test {
 
 TEST_F(MatchGroupServiceTest, GetSeasonListReturnsConfiguredSeasons) {
   auto req = std::make_shared<lib::GetSeasonListReq>();
-  lib::GetSeasonListResp resp;
+  auto resp = lib::GetSeasonListResp{};
   service_->GetSeasonList(
       req, [&resp](const lib::GetSeasonListResp& r) { resp = r; });
 
@@ -120,7 +120,7 @@ TEST_F(MatchGroupServiceTest, SubmitTicketCreatesEntity) {
   (*req->mutable_ticket()->mutable_attributes())[1] = 500;
   req->add_registrations(1);
 
-  lib::SubmitTicketResp resp;
+  auto resp = lib::SubmitTicketResp{};
   service_->SubmitTicket(req,
                          [&resp](const lib::SubmitTicketResp& r) { resp = r; });
 
@@ -137,7 +137,7 @@ TEST_F(MatchGroupServiceTest, SubmitTicketInvalidParameter) {
   req->mutable_ticket()->set_id(0);
   req->mutable_ticket()->set_zone_id(1);
 
-  lib::SubmitTicketResp resp;
+  auto resp = lib::SubmitTicketResp{};
   service_->SubmitTicket(req,
                          [&resp](const lib::SubmitTicketResp& r) { resp = r; });
 
@@ -160,7 +160,7 @@ TEST_F(MatchGroupServiceTest, GetTicketReturnsData) {
   auto req = std::make_shared<lib::GetTicketReq>();
   req->set_id(42);
 
-  lib::GetTicketResp resp;
+  auto resp = lib::GetTicketResp{};
   service_->GetTicket(req, [&resp](const lib::GetTicketResp& r) { resp = r; });
 
   EXPECT_EQ(resp.result(), lib::OK);
@@ -177,7 +177,7 @@ TEST_F(MatchGroupServiceTest, GetTicketNotFound) {
   auto req = std::make_shared<lib::GetTicketReq>();
   req->set_id(999);
 
-  lib::GetTicketResp resp;
+  auto resp = lib::GetTicketResp{};
   service_->GetTicket(req, [&resp](const lib::GetTicketResp& r) { resp = r; });
 
   EXPECT_EQ(resp.result(), lib::TICKET_NOT_FOUND);
@@ -185,7 +185,7 @@ TEST_F(MatchGroupServiceTest, GetTicketNotFound) {
 
 TEST_F(MatchGroupServiceTest, RegisterSeasonAddsRegistrations) {
   auto entity = manager_->GetOrCreateEntity(7, 1);
-  lib::RegisterSeasonResp resp;
+  auto resp = lib::RegisterSeasonResp{};
 
   auto req = std::make_shared<lib::RegisterSeasonReq>();
   req->set_id(7);
@@ -205,7 +205,7 @@ TEST_F(MatchGroupServiceTest, RegisterSeasonTicketNotFound) {
   req->set_id(999);
   req->add_types(1);
 
-  lib::RegisterSeasonResp resp;
+  auto resp = lib::RegisterSeasonResp{};
   service_->RegisterSeason(
       req, [&resp](const lib::RegisterSeasonResp& r) { resp = r; });
 
@@ -218,7 +218,7 @@ TEST_F(MatchGroupServiceTest, RegisterSeasonNotFound) {
   req->set_id(8);
   req->add_types(999);
 
-  lib::RegisterSeasonResp resp;
+  auto resp = lib::RegisterSeasonResp{};
   service_->RegisterSeason(
       req, [&resp](const lib::RegisterSeasonResp& r) { resp = r; });
 
@@ -233,7 +233,7 @@ TEST_F(MatchGroupServiceTest, GetTicketListSkipsMissing) {
   req->add_ids(10);
   req->add_ids(11);
 
-  lib::GetTicketListResp resp;
+  auto resp = lib::GetTicketListResp{};
   service_->GetTicketList(
       req, [&resp](const lib::GetTicketListResp& r) { resp = r; });
 
@@ -253,14 +253,14 @@ TEST_F(MatchGroupServiceTest, GetGroupMembersReturnsMap) {
     group.set_group_id(555);
   }
 
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   ticket_manager_->Initialize(*config_, 50, rng);
 
   auto req = std::make_shared<lib::GetGroupMembersReq>();
   req->set_type(1);
   req->set_group_id(555);
 
-  lib::GetGroupMembersResp resp;
+  auto resp = lib::GetGroupMembersResp{};
   service_->GetGroupMembers(
       req, [&resp](const lib::GetGroupMembersResp& r) { resp = r; });
 
@@ -281,7 +281,7 @@ TEST_F(MatchGroupServiceTest, GetSettlementListReturnsData) {
   auto req = std::make_shared<lib::GetSettlementListReq>();
   req->set_id(30);
 
-  lib::GetSettlementListResp resp;
+  auto resp = lib::GetSettlementListResp{};
   service_->GetSettlementList(
       req, [&resp](const lib::GetSettlementListResp& r) { resp = r; });
 
@@ -294,7 +294,7 @@ TEST_F(MatchGroupServiceTest, GetSettlementListTicketNotFound) {
   auto req = std::make_shared<lib::GetSettlementListReq>();
   req->set_id(999);
 
-  lib::GetSettlementListResp resp;
+  auto resp = lib::GetSettlementListResp{};
   service_->GetSettlementList(
       req, [&resp](const lib::GetSettlementListResp& r) { resp = r; });
 
@@ -313,7 +313,7 @@ TEST_F(MatchGroupServiceTest, RemoveSettlementListErasesKey) {
   req->set_id(40);
   req->add_settlement_ids(1);
 
-  lib::RemoveSettlementListResp resp;
+  auto resp = lib::RemoveSettlementListResp{};
   service_->RemoveSettlementList(
       req, [&resp](const lib::RemoveSettlementListResp& r) { resp = r; });
 

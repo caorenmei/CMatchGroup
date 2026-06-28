@@ -15,7 +15,7 @@ namespace cmatch {
 namespace {
 
 config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
-  config::SeasonInfo info;
+  auto info = config::SeasonInfo{};
   info.set_type(season_type);
   info.set_initial_score(1000);
   info.set_score_attr_id(1);
@@ -23,7 +23,7 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
   info.set_initial_grade(1);
 
   {
-    config::GradeInfo grade;
+    auto grade = config::GradeInfo{};
     grade.set_grade(1);
     grade.set_prev_grade(1);
     grade.set_next_grade(2);
@@ -36,7 +36,7 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
   }
 
   {
-    config::GradeInfo grade;
+    auto grade = config::GradeInfo{};
     grade.set_grade(2);
     grade.set_prev_grade(1);
     grade.set_next_grade(2);
@@ -52,7 +52,7 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
 }
 
 config::SeasonTime MakeSeasonTime(std::uint64_t begin, std::uint64_t end) {
-  config::SeasonTime time;
+  auto time = config::SeasonTime{};
   time.set_begin_time(begin);
   time.set_end_time(end);
   return time;
@@ -96,18 +96,18 @@ class MockSeasonConfig : public SeasonConfigInterface {
 
 MockSeasonConfig MakeMockConfig(const config::SeasonInfo& info,
                                 const config::SeasonTime& time) {
-  MockSeasonConfig config(info);
+  auto config = MockSeasonConfig{info};
   config.SetTime(time);
   return config;
 }
 
 TEST(ExceptionHandlingTest, RepairsSeasonTimeMismatch) {
-  testing::MockTicketEntityManager manager;
-  TicketManager tm(manager);
+  auto manager = testing::MockTicketEntityManager{};
+  auto tm = TicketManager{manager};
 
-  config::SeasonInfo info = MakeSeasonInfo(1);
-  config::SeasonTime config_time = MakeSeasonTime(100, 200);
-  config::SeasonTime stale_time = MakeSeasonTime(0, 50);
+  auto info = MakeSeasonInfo(1);
+  auto config_time = MakeSeasonTime(100, 200);
+  auto stale_time = MakeSeasonTime(0, 50);
 
   auto entity = manager.GetOrCreateEntity(1, 1);
   {
@@ -119,7 +119,7 @@ TEST(ExceptionHandlingTest, RepairsSeasonTimeMismatch) {
     group.set_group_id(1000);
   }
 
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   tm.Initialize(MakeMockConfig(info, config_time), 150, rng);
 
   const auto& group = entity->GetData().seasons().at(1);
@@ -129,14 +129,14 @@ TEST(ExceptionHandlingTest, RepairsSeasonTimeMismatch) {
 }
 
 TEST(ExceptionHandlingTest, OutOfSeasonTicketsAreSettledAndAdded) {
-  testing::MockTicketEntityManager manager;
-  TicketManager tm(manager);
+  auto manager = testing::MockTicketEntityManager{};
+  auto tm = TicketManager{manager};
 
-  config::SeasonInfo info = MakeSeasonInfo(1);
+  auto info = MakeSeasonInfo(1);
   // Disable promotion so grade stays 1 for verification
   (*info.mutable_grades())[1].set_promote_rank(0);
-  config::SeasonTime old_time = MakeSeasonTime(0, 100);
-  config::SeasonTime new_time = MakeSeasonTime(100, 200);
+  auto old_time = MakeSeasonTime(0, 100);
+  auto new_time = MakeSeasonTime(100, 200);
 
   // In-season ticket in grade 1
   auto in_season = manager.GetOrCreateEntity(1, 1);
@@ -162,7 +162,7 @@ TEST(ExceptionHandlingTest, OutOfSeasonTicketsAreSettledAndAdded) {
     group.set_group_id(1000);
   }
 
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   tm.Initialize(MakeMockConfig(info, new_time), 150, rng);
 
   // Out-of-season ticket should be settled and then grouped in current season
@@ -181,12 +181,12 @@ TEST(ExceptionHandlingTest, OutOfSeasonTicketsAreSettledAndAdded) {
 }
 
 TEST(ExceptionHandlingTest, AlreadySettledTicketsAreNotOverwritten) {
-  testing::MockTicketEntityManager manager;
-  TicketManager tm(manager);
+  auto manager = testing::MockTicketEntityManager{};
+  auto tm = TicketManager{manager};
 
-  config::SeasonInfo info = MakeSeasonInfo(1);
-  config::SeasonTime old_time = MakeSeasonTime(0, 100);
-  config::SeasonTime new_time = MakeSeasonTime(100, 200);
+  auto info = MakeSeasonInfo(1);
+  auto old_time = MakeSeasonTime(0, 100);
+  auto new_time = MakeSeasonTime(100, 200);
 
   // Two out-of-season tickets in same old group
   auto entity1 = manager.GetOrCreateEntity(1, 1);
@@ -194,7 +194,7 @@ TEST(ExceptionHandlingTest, AlreadySettledTicketsAreNotOverwritten) {
   SetScore(entity1, info.score_attr_id(), 100);
   SetScore(entity2, info.score_attr_id(), 200);
 
-  for (std::uint64_t id : {1, 2}) {
+  for (auto id : {std::uint64_t{1}, std::uint64_t{2}}) {
     auto entity = manager.GetEntity(id);
     {
       auto& group = (*entity->GetData().mutable_seasons())[1];
@@ -215,7 +215,7 @@ TEST(ExceptionHandlingTest, AlreadySettledTicketsAreNotOverwritten) {
     settlement.set_score(9999);
   }
 
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   tm.Initialize(MakeMockConfig(info, new_time), 150, rng);
 
   // entity1 settlement should remain unchanged
@@ -227,13 +227,13 @@ TEST(ExceptionHandlingTest, AlreadySettledTicketsAreNotOverwritten) {
 }
 
 TEST(ExceptionHandlingTest, ResetScoreOnNextSeason) {
-  testing::MockTicketEntityManager manager;
-  TicketManager tm(manager);
+  auto manager = testing::MockTicketEntityManager{};
+  auto tm = TicketManager{manager};
 
-  config::SeasonInfo info = MakeSeasonInfo(1);
+  auto info = MakeSeasonInfo(1);
   info.set_reset_score(true);
   info.set_initial_score(777);
-  config::SeasonTime time = MakeSeasonTime(0, 100);
+  auto time = MakeSeasonTime(0, 100);
 
   auto entity = manager.GetOrCreateEntity(1, 1);
   SetScore(entity, info.score_attr_id(), 5000);
@@ -246,20 +246,20 @@ TEST(ExceptionHandlingTest, ResetScoreOnNextSeason) {
     group.set_group_id(1000);
   }
 
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   tm.NextSeason(info, time, 200, rng);
 
   EXPECT_EQ(entity->GetData().attributes().at(info.score_attr_id()), 777);
 }
 
 TEST(ExceptionHandlingTest, KeepScoreOnNextSeason) {
-  testing::MockTicketEntityManager manager;
-  TicketManager tm(manager);
+  auto manager = testing::MockTicketEntityManager{};
+  auto tm = TicketManager{manager};
 
-  config::SeasonInfo info = MakeSeasonInfo(1);
+  auto info = MakeSeasonInfo(1);
   info.set_reset_score(false);
   info.set_initial_score(777);
-  config::SeasonTime time = MakeSeasonTime(0, 100);
+  auto time = MakeSeasonTime(0, 100);
 
   auto entity = manager.GetOrCreateEntity(1, 1);
   SetScore(entity, info.score_attr_id(), 5000);
@@ -272,23 +272,23 @@ TEST(ExceptionHandlingTest, KeepScoreOnNextSeason) {
     group.set_group_id(1000);
   }
 
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   tm.NextSeason(info, time, 200, rng);
 
   EXPECT_EQ(entity->GetData().attributes().at(info.score_attr_id()), 5000);
 }
 
 TEST(ExceptionHandlingTest, MergedServerGroupIdsDoNotConflict) {
-  testing::MockTicketEntityManager manager;
-  TicketManager tm(manager);
+  auto manager = testing::MockTicketEntityManager{};
+  auto tm = TicketManager{manager};
 
-  config::SeasonInfo info = MakeSeasonInfo(1);
+  auto info = MakeSeasonInfo(1);
   info.set_initial_grade(1);
   // group_size = 1 so each ticket gets its own group
   (*info.mutable_grades())[1].set_group_size(1);
   // Disable promotion so both stay in grade 1
   (*info.mutable_grades())[1].set_promote_rank(0);
-  config::SeasonTime time = MakeSeasonTime(0, 100);
+  auto time = MakeSeasonTime(0, 100);
 
   // Pre-existing group IDs from different zones sharing the same sequence
   {
@@ -307,10 +307,10 @@ TEST(ExceptionHandlingTest, MergedServerGroupIdsDoNotConflict) {
   }
 
   // Both are in season, will be regrouped with new unique IDs
-  std::mt19937 rng(12345);
+  auto rng = std::mt19937{12345};
   tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
-  std::unordered_set<std::uint64_t> group_ids;
+  auto group_ids = std::unordered_set<std::uint64_t>{};
   for (const auto& [id, entity] : manager.GetEntities()) {
     (void)id;
     group_ids.insert(entity->GetData().seasons().at(1).group_id());

@@ -10,7 +10,6 @@
 
 #include "cmatch/config.pb.h"
 #include "cmatch/table.pb.h"
-#include "cmatch/ticket_entity_interface.h"
 #include "cmatch/ticket_entity_manager_interface.h"
 
 namespace cmatch {
@@ -25,15 +24,15 @@ MatchGroupServiceImpl::MatchGroupServiceImpl(
 void MatchGroupServiceImpl::GetSeasonList(
     const std::shared_ptr<lib::GetSeasonListReq>& /*request*/,
     const std::function<void(const lib::GetSeasonListResp&)>& done) {
-  lib::GetSeasonListResp resp;
+  auto resp = lib::GetSeasonListResp{};
   resp.set_result(lib::OK);
 
-  for (std::uint32_t type : config_.GetTypes()) {
-    config::SeasonTime time;
+  for (auto type : config_.GetTypes()) {
+    auto time = config::SeasonTime{};
     if (!config_.GetTime(type, time)) {
       continue;
     }
-    lib::Season* season = resp.add_seasons();
+    auto* season = resp.add_seasons();
     season->set_type(type);
     season->set_begin_time(time.begin_time());
     season->set_end_time(time.end_time());
@@ -45,26 +44,26 @@ void MatchGroupServiceImpl::GetSeasonList(
 void MatchGroupServiceImpl::SubmitTicket(
     const std::shared_ptr<lib::SubmitTicketReq>& request,
     const std::function<void(const lib::SubmitTicketResp&)>& done) {
-  lib::SubmitTicketResp resp;
+  auto resp = lib::SubmitTicketResp{};
 
-  const std::uint64_t id = request->ticket().id();
-  const std::uint32_t zone_id = request->ticket().zone_id();
+  const auto id = request->ticket().id();
+  const auto zone_id = request->ticket().zone_id();
   if (id == 0 || zone_id == 0) {
     resp.set_result(lib::INVALID_PARAMETER);
     done(resp);
     return;
   }
 
-  TicketEntityPtr entity = entity_manager_.GetOrCreateEntity(id, zone_id);
-  table::Ticket& ticket = entity->GetData();
+  auto entity = entity_manager_.GetOrCreateEntity(id, zone_id);
+  auto& ticket = entity->GetData();
 
   for (const auto& attr : request->ticket().attributes()) {
     (*ticket.mutable_attributes())[attr.first] = attr.second;
   }
 
-  std::unordered_set<std::uint32_t> existing_regs(
+  auto existing_regs = std::unordered_set<std::uint32_t>(
       ticket.registrations().begin(), ticket.registrations().end());
-  for (std::uint32_t reg : request->registrations()) {
+  for (auto reg : request->registrations()) {
     if (existing_regs.insert(reg).second) {
       ticket.add_registrations(reg);
     }
@@ -78,17 +77,17 @@ void MatchGroupServiceImpl::SubmitTicket(
 void MatchGroupServiceImpl::GetTicket(
     const std::shared_ptr<lib::GetTicketReq>& request,
     const std::function<void(const lib::GetTicketResp&)>& done) {
-  lib::GetTicketResp resp;
-  const std::uint64_t id = request->id();
+  auto resp = lib::GetTicketResp{};
+  const auto id = request->id();
 
-  TicketEntityPtr entity = entity_manager_.GetEntity(id);
+  auto entity = entity_manager_.GetEntity(id);
   if (entity == nullptr) {
     resp.set_result(lib::TICKET_NOT_FOUND);
     done(resp);
     return;
   }
 
-  const table::Ticket& ticket = entity->GetData();
+  const auto& ticket = entity->GetData();
   resp.set_result(lib::OK);
   resp.mutable_ticket()->set_id(ticket.id());
   resp.mutable_ticket()->set_zone_id(ticket.zone_id());
@@ -96,12 +95,12 @@ void MatchGroupServiceImpl::GetTicket(
     (*resp.mutable_ticket()->mutable_attributes())[attr.first] = attr.second;
   }
 
-  for (std::uint32_t reg : ticket.registrations()) {
+  for (auto reg : ticket.registrations()) {
     resp.add_registrations(reg);
   }
 
   for (const auto& season : ticket.seasons()) {
-    lib::SeasonGroup* out = &(*resp.mutable_seasons())[season.first];
+    auto* out = &(*resp.mutable_seasons())[season.first];
     out->set_type(season.second.type());
     out->set_begin_time(season.second.begin_time());
     out->set_end_time(season.second.end_time());
@@ -115,23 +114,23 @@ void MatchGroupServiceImpl::GetTicket(
 void MatchGroupServiceImpl::RegisterSeason(
     const std::shared_ptr<lib::RegisterSeasonReq>& request,
     const std::function<void(const lib::RegisterSeasonResp&)>& done) {
-  lib::RegisterSeasonResp resp;
-  const std::uint64_t id = request->id();
+  auto resp = lib::RegisterSeasonResp{};
+  const auto id = request->id();
 
-  TicketEntityPtr entity = entity_manager_.GetEntity(id);
+  auto entity = entity_manager_.GetEntity(id);
   if (entity == nullptr) {
     resp.set_result(lib::TICKET_NOT_FOUND);
     done(resp);
     return;
   }
 
-  table::Ticket& ticket = entity->GetData();
-  std::unordered_set<std::uint32_t> existing_regs(
+  auto& ticket = entity->GetData();
+  auto existing_regs = std::unordered_set<std::uint32_t>(
       ticket.registrations().begin(), ticket.registrations().end());
 
-  for (std::uint32_t type : request->types()) {
-    config::SeasonInfo info;
-    config::SeasonTime time;
+  for (auto type : request->types()) {
+    auto info = config::SeasonInfo{};
+    auto time = config::SeasonTime{};
     if (!config_.GetInfo(type, info) || !config_.GetTime(type, time)) {
       resp.set_result(lib::SEASON_NOT_FOUND);
       done(resp);
@@ -150,16 +149,16 @@ void MatchGroupServiceImpl::RegisterSeason(
 void MatchGroupServiceImpl::GetTicketList(
     const std::shared_ptr<lib::GetTicketListReq>& request,
     const std::function<void(const lib::GetTicketListResp&)>& done) {
-  lib::GetTicketListResp resp;
+  auto resp = lib::GetTicketListResp{};
   resp.set_result(lib::OK);
 
-  for (std::uint64_t id : request->ids()) {
-    TicketEntityPtr entity = entity_manager_.GetEntity(id);
+  for (auto id : request->ids()) {
+    auto entity = entity_manager_.GetEntity(id);
     if (entity == nullptr) {
       continue;
     }
-    const table::Ticket& ticket = entity->GetData();
-    lib::Ticket* out = resp.add_tickets();
+    const auto& ticket = entity->GetData();
+    auto* out = resp.add_tickets();
     out->set_id(ticket.id());
     out->set_zone_id(ticket.zone_id());
     for (const auto& attr : ticket.attributes()) {
@@ -173,19 +172,19 @@ void MatchGroupServiceImpl::GetTicketList(
 void MatchGroupServiceImpl::GetGroupMembers(
     const std::shared_ptr<lib::GetGroupMembersReq>& request,
     const std::function<void(const lib::GetGroupMembersResp&)>& done) {
-  lib::GetGroupMembersResp resp;
+  auto resp = lib::GetGroupMembersResp{};
   resp.set_result(lib::OK);
 
-  const std::uint32_t season_type = request->type();
-  const std::uint64_t group_id = request->group_id();
+  const auto season_type = request->type();
+  const auto group_id = request->group_id();
 
-  for (std::uint64_t ticket_id :
+  for (auto ticket_id :
        ticket_manager_.GetGroupTicketIds(season_type, group_id)) {
-    TicketEntityPtr entity = entity_manager_.GetEntity(ticket_id);
+    auto entity = entity_manager_.GetEntity(ticket_id);
     if (entity == nullptr) {
       continue;
     }
-    const table::Ticket& ticket = entity->GetData();
+    const auto& ticket = entity->GetData();
     (*resp.mutable_members())[ticket.id()] = ticket.zone_id();
   }
 
@@ -195,10 +194,10 @@ void MatchGroupServiceImpl::GetGroupMembers(
 void MatchGroupServiceImpl::GetSettlementList(
     const std::shared_ptr<lib::GetSettlementListReq>& request,
     const std::function<void(const lib::GetSettlementListResp&)>& done) {
-  lib::GetSettlementListResp resp;
-  const std::uint64_t id = request->id();
+  auto resp = lib::GetSettlementListResp{};
+  const auto id = request->id();
 
-  TicketEntityPtr entity = entity_manager_.GetEntity(id);
+  auto entity = entity_manager_.GetEntity(id);
   if (entity == nullptr) {
     resp.set_result(lib::TICKET_NOT_FOUND);
     done(resp);
@@ -206,9 +205,9 @@ void MatchGroupServiceImpl::GetSettlementList(
   }
 
   resp.set_result(lib::OK);
-  const table::Ticket& ticket = entity->GetData();
+  const auto& ticket = entity->GetData();
   for (const auto& settlement : ticket.settlements()) {
-    lib::SeasonSettlement* out = resp.add_settlements();
+    auto* out = resp.add_settlements();
     out->set_type(settlement.second.type());
     out->set_begin_time(settlement.second.begin_time());
     out->set_end_time(settlement.second.end_time());
@@ -225,23 +224,23 @@ void MatchGroupServiceImpl::GetSettlementList(
 void MatchGroupServiceImpl::RemoveSettlementList(
     const std::shared_ptr<lib::RemoveSettlementListReq>& request,
     const std::function<void(const lib::RemoveSettlementListResp&)>& done) {
-  lib::RemoveSettlementListResp resp;
-  const std::uint64_t id = request->id();
+  auto resp = lib::RemoveSettlementListResp{};
+  const auto id = request->id();
 
-  TicketEntityPtr entity = entity_manager_.GetEntity(id);
+  auto entity = entity_manager_.GetEntity(id);
   if (entity == nullptr) {
     resp.set_result(lib::TICKET_NOT_FOUND);
     done(resp);
     return;
   }
 
-  table::Ticket& ticket = entity->GetData();
+  auto& ticket = entity->GetData();
   bool changed = false;
-  for (std::uint64_t settlement_id : request->settlement_ids()) {
+  for (auto settlement_id : request->settlement_ids()) {
     if (settlement_id > std::numeric_limits<std::uint32_t>::max()) {
       continue;
     }
-    const std::uint32_t season_type = static_cast<std::uint32_t>(settlement_id);
+    const auto season_type = static_cast<std::uint32_t>(settlement_id);
     if (ticket.mutable_settlements()->erase(season_type) > 0) {
       changed = true;
     }
