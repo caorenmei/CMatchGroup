@@ -86,7 +86,7 @@ docs/specs/cmatch_library/implementation/ # 实施路线
   ```
 - 使用 `clang-tidy` 进行静态分析：
   ```bash
-  clang-tidy -p build/debug src/math_utils.cpp
+  find src/cmatch -name "*.cpp" | xargs clang-tidy -p build/debug
   ```
 
 ## 贡献指南
