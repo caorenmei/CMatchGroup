@@ -562,6 +562,63 @@ TEST(TicketManagerTest, GroupIndexReturnsMembers) {
   }
 }
 
+TEST(TicketManagerTest, PendingTicketsFillUnfilledGroupsFirst) {
+  testing::MockTicketEntityManager manager;
+  TicketManager tm(manager);
+
+  config::SeasonInfo info = MakeSeasonInfo(1);
+  (*info.mutable_grades())[1].set_group_size(3);
+  // 配置 grade 2：所有结算者都会升段回到 grade 1
+  {
+    config::GradeInfo grade;
+    grade.set_grade(2);
+    grade.set_prev_grade(1);
+    grade.set_next_grade(1);
+    grade.set_group_size(0);
+    grade.set_promote_rank(0);
+    grade.set_promote_rank_percent(1.0F);
+    grade.set_demote_rank(0);
+    grade.set_demote_rank_percent(0.0F);
+    (*info.mutable_grades())[2] = grade;
+  }
+  config::SeasonTime time = MakeSeasonTime(0, 100);
+  std::mt19937 rng(12345);
+
+  // 当前赛季内已有一个未满分组（size=1，容量=3）
+  auto in_season = manager.GetOrCreateEntity(1, 1);
+  SetScore(in_season, info.score_attr_id(), 100);
+  {
+    auto& group = (*in_season->GetData().mutable_seasons())[1];
+    group.set_type(1);
+    group.set_begin_time(0);
+    group.set_end_time(100);
+    group.set_grade(1);
+    group.set_group_id(1000);
+  }
+
+  // 不在当前赛季内的两个凭据，原段位为 2，结算后升段回到 grade 1
+  for (std::uint64_t id = 2; id <= 3; ++id) {
+    auto entity = manager.GetOrCreateEntity(id, 1);
+    SetScore(entity, info.score_attr_id(), id * 10);
+    auto& group = (*entity->GetData().mutable_seasons())[1];
+    group.set_type(1);
+    group.set_begin_time(0);
+    group.set_end_time(50);  // 不在当前赛季 [0, 100) 内
+    group.set_grade(2);
+    group.set_group_id(2000 + id);
+  }
+
+  tm.Initialize(MakeMockConfig(info, time), 75, rng);
+
+  // 凭据 2、3 应优先填入 group 1000，与凭据 1 同组
+  EXPECT_EQ(manager.GetEntity(1)->GetData().seasons().at(1).group_id(), 1000);
+  EXPECT_EQ(manager.GetEntity(2)->GetData().seasons().at(1).group_id(), 1000);
+  EXPECT_EQ(manager.GetEntity(3)->GetData().seasons().at(1).group_id(), 1000);
+
+  auto members = tm.GetGroupTicketIds(1, 1000);
+  EXPECT_EQ(members.size(), 3);
+}
+
 TEST(TicketManagerTest, NextSeasonProducesSettlements) {
   testing::MockTicketEntityManager manager;
   TicketManager tm(manager);

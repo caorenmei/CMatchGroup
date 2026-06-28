@@ -126,9 +126,6 @@ class TicketManager {
                       std::uint32_t group_size, std::uint32_t grade,
                       std::mt19937& rng, std::vector<GroupSlot>& slots);
 
-  void AddToGroupSlots(const TicketEntityPtr& entity, std::uint32_t group_size,
-                       std::uint32_t grade, std::vector<GroupSlot>& slots);
-
   void WriteSeasonGroups(std::vector<GroupSlot>& slots,
                          std::uint32_t season_type,
                          const config::SeasonInfo& season_info,
