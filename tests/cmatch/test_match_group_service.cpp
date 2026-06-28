@@ -253,6 +253,9 @@ TEST_F(MatchGroupServiceTest, GetGroupMembersReturnsMap) {
     group.set_group_id(555);
   }
 
+  std::mt19937 rng(12345);
+  ticket_manager_->Initialize(*config_, 50, rng);
+
   auto req = std::make_shared<lib::GetGroupMembersReq>();
   req->set_type(1);
   req->set_group_id(555);
