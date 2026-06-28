@@ -3,17 +3,17 @@
 > 使用两级结构管理：`## 大步骤` 为一级，`### 步骤内部进度` 为二级。
 > 每完成一个子任务，将其状态标记为 `[x]`；每完成一个大步骤，将一级标题状态更新为 `[x]`。
 
-## [ ] 步骤 1：Protobuf 配置与数据结构
+## [x] 步骤 1：Protobuf 配置与数据结构
 
 ### 步骤内部进度
 
-- [ ] 1.1 梳理 `config.md` 与 `data_structures.md` 中的 Protobuf 消息，确认字段、类型、包名。
-- [ ] 1.2 根据当前代码库状态微调需求与验收条件。
-- [ ] 1.3 创建 `proto/cmatch/config.proto` 与 `proto/cmatch/table.proto`。
-- [ ] 1.4 配置 CMake 以使用 `protobuf_generate_cpp` 编译 `.proto` 文件。
-- [ ] 1.5 构建项目，确认生成的 C++ 头文件/源文件可被 `src/` 正常引用。
-- [ ] 1.6 编写最小测试，验证 Protobuf 消息序列化/反序列化正确。
-- [ ] 1.7 应用 `clang-format` 与 `clang-tidy`，确保无新增警告。
+- [x] 1.1 梳理 `config.md` 与 `data_structures.md` 中的 Protobuf 消息，确认字段、类型、包名。
+- [x] 1.2 根据当前代码库状态微调需求与验收条件。
+- [x] 1.3 创建 `proto/cmatch/config.proto` 与 `proto/cmatch/table.proto`。
+- [x] 1.4 配置 CMake 以使用 `protobuf_generate_cpp` 编译 `.proto` 文件。
+- [x] 1.5 构建项目，确认生成的 C++ 头文件/源文件可被 `src/` 正常引用。
+- [x] 1.6 编写最小测试，验证 Protobuf 消息序列化/反序列化正确。
+- [x] 1.7 应用 `clang-format` 与 `clang-tidy`，确保无新增警告。
 - [ ] 1.8 提交变更，更新本文件状态。
 
 ## [ ] 步骤 2：核心接口定义
