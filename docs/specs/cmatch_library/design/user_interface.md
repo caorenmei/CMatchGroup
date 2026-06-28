@@ -335,8 +335,18 @@ public:
         std::uint32_t now_time,
         std::uint64_t ticket_id,
         std::mt19937& rng);
+
+    // 获取指定分组内的凭据 ID 列表（顺序不做保证）
+    std::vector<std::uint64_t> GetGroupTicketIds(
+        std::uint32_t season_type,
+        std::uint64_t group_id) const;
 };
 ```
+
+### 赛季时间修复语义
+
+- `Initialize` 仅在凭据上的时间位于当前赛季内时，才将其修复为配置的赛季时间。
+- `AddTicket` 对已存在赛季分组的凭据，同样仅在当前赛季内修复时间。
 
 ## 相关文档
 
