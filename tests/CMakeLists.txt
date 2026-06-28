@@ -78,3 +78,18 @@ target_link_libraries(
 )
 
 gtest_discover_tests(test_match_group_service)
+
+# 异常处理与数据修复测试
+add_executable(
+  test_exception_handling
+  cmatch/test_exception_handling.cpp
+)
+
+target_link_libraries(
+  test_exception_handling
+  PRIVATE
+  cmatch
+  GTest::gtest_main
+)
+
+gtest_discover_tests(test_exception_handling)
