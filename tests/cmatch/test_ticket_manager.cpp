@@ -531,6 +531,37 @@ TEST(TicketManagerTest, InSeasonTimeIsRepaired) {
 }
 
 
+TEST(TicketManagerTest, GroupIndexReturnsMembers) {
+  testing::MockTicketEntityManager manager;
+  TicketManager tm(manager);
+
+  config::SeasonInfo info = MakeSeasonInfo(1);
+  config::SeasonTime time = MakeSeasonTime(0, 100);
+  std::mt19937 rng(12345);
+
+  for (std::uint64_t id = 1; id <= 4; ++id) {
+    auto entity = manager.GetOrCreateEntity(id, 1);
+    SetScore(entity, info.score_attr_id(), id * 10);
+  }
+
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
+
+  std::unordered_map<std::uint64_t, std::size_t> group_sizes;
+  for (std::uint64_t id = 1; id <= 4; ++id) {
+    const auto& ticket = manager.GetEntity(id)->GetData();
+    const std::uint64_t group_id = ticket.seasons().at(1).group_id();
+    auto members = tm.GetGroupTicketIds(1, group_id);
+    EXPECT_NE(std::find(members.begin(), members.end(), id), members.end());
+    group_sizes[group_id] = members.size();
+  }
+
+  EXPECT_EQ(group_sizes.size(), 2);
+  for (const auto& [group_id, size] : group_sizes) {
+    (void)group_id;
+    EXPECT_EQ(size, 2);
+  }
+}
+
 TEST(TicketManagerTest, NextSeasonProducesSettlements) {
   testing::MockTicketEntityManager manager;
   TicketManager tm(manager);

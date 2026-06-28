@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "cmatch/config.pb.h"
@@ -65,6 +67,13 @@ class TicketManager {
                  const config::SeasonTime& season_time, std::uint32_t now_time,
                  std::uint64_t ticket_id, std::mt19937& rng);
 
+  /// @brief 获取指定分组内的凭据 ID 列表
+  /// @param[in] season_type 赛季类型
+  /// @param[in] group_id 分组 ID
+  /// @return 凭据 ID 列表（顺序不做保证）
+  std::vector<std::uint64_t> GetGroupTicketIds(
+      std::uint32_t season_type, std::uint64_t group_id) const;
+
  private:
   // 分组 ID 分配器，高 32 位为 zone_id，低 32 位为自增编号
   struct GroupIdAllocator {
@@ -122,6 +131,7 @@ class TicketManager {
 
   void WriteSeasonGroups(std::vector<GroupSlot>& slots,
                          std::uint32_t season_type,
+                         const config::SeasonInfo& season_info,
                          const config::SeasonTime& season_time);
 
   /// @brief 逐个赛事类型完成初始化
@@ -132,6 +142,29 @@ class TicketManager {
   void InitializeSeasonType(const SeasonConfigInterface& config,
                             std::uint32_t season_type, std::uint32_t now_time,
                             std::mt19937& rng);
+
+  /// @brief 根据当前凭据数据重建分组索引
+  /// @param[in] config 赛季配置接口
+  void RebuildGroupIndex(const SeasonConfigInterface& config);
+
+  // 用于 pair 键的哈希辅助结构
+  struct PairHash {
+    std::size_t operator()(
+        const std::pair<std::uint32_t, std::uint32_t>& p) const noexcept {
+      return (std::hash<std::uint32_t>{}(p.first) * 31) +
+             std::hash<std::uint32_t>{}(p.second);
+    }
+  };
+
+  // 分组索引
+  std::unordered_map<std::pair<std::uint32_t, std::uint32_t>,
+                     std::unordered_set<std::uint64_t>, PairHash>
+      season_grade_to_groups_;
+  std::unordered_map<std::uint64_t, std::unordered_set<std::uint64_t>>
+      group_to_tickets_;
+  std::unordered_map<std::pair<std::uint32_t, std::uint32_t>,
+                     std::unordered_set<std::uint64_t>, PairHash>
+      unfilled_season_grade_groups_;
 
   TicketEntityManagerInterface& entity_manager_;
   GroupIdAllocator group_id_allocator_;
