@@ -43,6 +43,7 @@ src/cmatch/                          # 库源码
 ├── match_group_service_default.h / .cpp # 默认服务实现
 └── math_utils.h / .cpp              # 工具函数（示例）
 
+tests/CMakeLists.txt                     # 测试子目录 CMake 配置
 tests/cmatch/                        # 测试代码
 ├── test_protobuf_messages.cpp       # Protobuf 消息测试
 ├── test_core_interfaces.cpp         # 核心接口测试
@@ -82,7 +83,7 @@ docs/specs/cmatch_library/implementation/ # 实施路线
 - 遵循 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)。
 - 使用 `clang-format` 格式化代码：
   ```bash
-  find src include tests -name "*.cpp" -o -name "*.h" | xargs clang-format -i
+  find src tests -name "*.cpp" -o -name "*.h" | xargs clang-format -i
   ```
 - 使用 `clang-tidy` 进行静态分析：
   ```bash

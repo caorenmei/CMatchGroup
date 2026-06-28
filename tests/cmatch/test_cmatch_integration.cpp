@@ -97,6 +97,7 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
     grade.set_grade(2);
     grade.set_prev_grade(1);
     grade.set_next_grade(2);
+    // group_size=0 表示顶级段位不再进行分组，所有凭据视为同一组
     grade.set_group_size(0);
     grade.set_promote_rank(0);
     grade.set_promote_rank_percent(0.0F);
@@ -192,8 +193,8 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
     lib::RegisterSeasonResp resp;
     service_->RegisterSeason(
         req, [&resp](const lib::RegisterSeasonResp& r) { resp = r; });
-    // 凭据不存在，应返回错误
-    EXPECT_NE(resp.result(), lib::OK);
+    // 凭据不存在，应返回 TICKET_NOT_FOUND 错误
+    EXPECT_EQ(resp.result(), lib::TICKET_NOT_FOUND);
   }
 
   // 为已存在的凭据报名（id=1 已在 SubmitTicket 中报名，验证幂等性）
@@ -214,21 +215,21 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
     ticket_manager_->BuildSeason(info, time, 50, rng);
   }
 
+  // 记录 BuildSeason 后的分组，用于后续验证段位升降
+  std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> pre_next_groups;
+  for (std::uint64_t id = 1; id <= 4; ++id) {
+    auto entity = manager_->GetEntity(id);
+    ASSERT_NE(entity, nullptr);
+    std::uint64_t group_id = entity->GetData().seasons().at(1).group_id();
+    pre_next_groups[group_id].push_back(id);
+  }
+
   // 8. 调用 GetGroupMembers 验证分组成员（group_size=2，4 个凭据应分为 2
   // 组，每组 2 人）
   {
-    // 收集所有凭据的分组 ID 并统计每组人数
-    std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> group_members;
-    for (std::uint64_t id = 1; id <= 4; ++id) {
-      auto entity = manager_->GetEntity(id);
-      ASSERT_NE(entity, nullptr);
-      std::uint64_t group_id = entity->GetData().seasons().at(1).group_id();
-      group_members[group_id].push_back(id);
-    }
-
     // 验证共有 2 个分组，每组恰好 2 个成员
-    EXPECT_EQ(group_members.size(), 2);
-    for (const auto& [group_id, members] : group_members) {
+    EXPECT_EQ(pre_next_groups.size(), 2);
+    for (const auto& [group_id, members] : pre_next_groups) {
       (void)group_id;
       EXPECT_EQ(members.size(), 2)
           << "分组 ID " << group_id << " 的成员数应为 2";
@@ -275,18 +276,57 @@ TEST_F(CMatchIntegrationTest, EndToEndWorkflow) {
 
   // 11. 验证段位升降与积分重置行为
   {
-    // 最高分凭据（id=4，score=400）应升段
-    auto entity4 = manager_->GetEntity(4);
-    ASSERT_NE(entity4, nullptr);
-    EXPECT_EQ(entity4->GetData().seasons().at(1).grade(), 2);
+    // group_size=2，4 个凭据分为 2 组，每组 promote_rank=1，应有 2 个凭据升段
+    // 使用 BuildSeason 后的分组记录验证：每组中积分最高者升段
+    for (const auto& [group_id, members] : pre_next_groups) {
+      (void)group_id;
+      ASSERT_EQ(members.size(), 2);
+      std::uint64_t promoted_id = 0;
+      std::uint64_t max_score = 0;
+      for (std::uint64_t id : members) {
+        auto e = manager_->GetEntity(id);
+        ASSERT_NE(e, nullptr);
+        std::uint64_t score = e->GetData().attributes().at(1);
+        if (score > max_score) {
+          max_score = score;
+          promoted_id = id;
+        }
+      }
+      ASSERT_NE(promoted_id, 0);
 
-    // 最低分凭据（id=1，score=100）应留在原段位
-    auto entity1 = manager_->GetEntity(1);
-    ASSERT_NE(entity1, nullptr);
-    EXPECT_EQ(entity1->GetData().seasons().at(1).grade(), 1);
+      // 验证该组中积分最高者已升段
+      auto promoted = manager_->GetEntity(promoted_id);
+      ASSERT_NE(promoted, nullptr);
+      EXPECT_EQ(promoted->GetData().seasons().at(1).grade(), 2)
+          << "凭据 " << promoted_id << " 应升段";
+
+      // 验证该组中其余凭据留在原段位
+      for (std::uint64_t id : members) {
+        if (id == promoted_id) continue;
+        auto e = manager_->GetEntity(id);
+        ASSERT_NE(e, nullptr);
+        EXPECT_EQ(e->GetData().seasons().at(1).grade(), 1)
+            << "凭据 " << id << " 应留在原段位";
+      }
+    }
+
+    // 验证恰好有 2 个凭据升段
+    std::size_t promoted_count = 0;
+    for (std::uint64_t id = 1; id <= 4; ++id) {
+      auto e = manager_->GetEntity(id);
+      ASSERT_NE(e, nullptr);
+      if (e->GetData().seasons().at(1).grade() == 2) {
+        ++promoted_count;
+      }
+    }
+    EXPECT_EQ(promoted_count, 2);
 
     // 未配置 reset_score，积分应保持不变
+    auto entity1 = manager_->GetEntity(1);
+    ASSERT_NE(entity1, nullptr);
     EXPECT_EQ(entity1->GetData().attributes().at(1), 100);
+    auto entity4 = manager_->GetEntity(4);
+    ASSERT_NE(entity4, nullptr);
     EXPECT_EQ(entity4->GetData().attributes().at(1), 400);
   }
 }
@@ -385,13 +425,21 @@ TEST_F(CMatchIntegrationTest, MergedServerGroupIdUniqueness) {
   std::mt19937 rng(12345);
   ticket_manager_->BuildSeason(info, time, 50, rng);
 
-  // 验证所有分组 ID 唯一
-  std::unordered_set<std::uint64_t> group_ids;
+  // 验证所有分组 ID 唯一，且每个分组内的凭据均来自同一 zone
+  std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> group_members;
   for (const auto& [id, entity] : manager_->GetEntities()) {
     (void)id;
     std::uint64_t group_id = entity->GetData().seasons().at(1).group_id();
+    group_members[group_id].push_back(entity->GetData().id());
+  }
+
+  std::unordered_set<std::uint64_t> group_ids;
+  for (const auto& [group_id, members] : group_members) {
     ASSERT_TRUE(group_ids.insert(group_id).second)
         << "分组 ID 重复: " << group_id;
+
+    // 验证每个分组内的凭据均来自同一 zone（group_size=1，每组应只有 1 人）
+    ASSERT_EQ(members.size(), 1) << "分组 ID " << group_id << " 的成员数应为 1";
   }
   EXPECT_EQ(group_ids.size(), 3);
 }
@@ -417,7 +465,8 @@ TEST_F(CMatchIntegrationTest, CrossSeasonRepairAfterTimeMismatch) {
     EXPECT_EQ(resp.result(), lib::OK);
   }
 
-  // 手动设置凭据的旧赛季时间
+  // 模拟凭据数据损坏：该凭据的赛季时间与配置不一致，
+  // 用于验证 BuildSeason 能正确检测并修复此类问题
   {
     auto entity = manager_->GetEntity(1);
     auto& group = (*entity->GetData().mutable_seasons())[1];
@@ -432,13 +481,24 @@ TEST_F(CMatchIntegrationTest, CrossSeasonRepairAfterTimeMismatch) {
   std::mt19937 rng(12345);
   ticket_manager_->BuildSeason(info, new_time, 150, rng);
 
-  // 验证凭据时间已被修复为新的配置时间
+  // 验证凭据时间已被修复为新的配置时间，并获得结算记录与重新分组
   auto entity = manager_->GetEntity(1);
   ASSERT_NE(entity, nullptr);
   const auto& group = entity->GetData().seasons().at(1);
   EXPECT_EQ(group.begin_time(), new_time.begin_time());
   EXPECT_EQ(group.end_time(), new_time.end_time());
   EXPECT_TRUE(manager_->IsDirty(1));
+
+  // 验证凭据获得结算记录且排名大于 0
+  ASSERT_TRUE(entity->GetData().settlements().contains(1));
+  EXPECT_GT(entity->GetData().settlements().at(1).rank(), 0);
+
+  // 验证凭据已被重新分组（group_id 不再是手动设置的 1000）
+  EXPECT_NE(group.group_id(), 1000);
+
+  // 验证凭据的赛季数据反映修复后的状态（凭据为唯一成员，应升段）
+  EXPECT_EQ(group.type(), 1);
+  EXPECT_EQ(group.grade(), 2);
 }
 
 }  // namespace
