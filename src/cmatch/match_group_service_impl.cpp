@@ -179,13 +179,13 @@ void MatchGroupServiceImpl::GetGroupMembers(
   const std::uint32_t season_type = request->type();
   const std::uint64_t group_id = request->group_id();
 
-  for (const auto& [id, entity] : entity_manager_.GetEntities()) {
-    (void)id;
-    const table::Ticket& ticket = entity->GetData();
-    auto it = ticket.seasons().find(season_type);
-    if (it == ticket.seasons().end() || it->second.group_id() != group_id) {
+  for (std::uint64_t ticket_id :
+       ticket_manager_.GetGroupTicketIds(season_type, group_id)) {
+    TicketEntityPtr entity = entity_manager_.GetEntity(ticket_id);
+    if (entity == nullptr) {
       continue;
     }
+    const table::Ticket& ticket = entity->GetData();
     (*resp.mutable_members())[ticket.id()] = ticket.zone_id();
   }
 

@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "cmatch/season_config_interface.h"
 #include "cmatch/table.pb.h"
 #include "cmatch/ticket_entity_interface.h"
 #include "cmatch/ticket_entity_manager_interface.h"
@@ -55,12 +56,27 @@ struct GroupSlot {
 TicketManager::TicketManager(TicketEntityManagerInterface& entity_manager)
     : entity_manager_(entity_manager) {}
 
-void TicketManager::BuildSeason(const config::SeasonInfo& season_info,
-                                const config::SeasonTime& season_time,
-                                std::uint32_t now_time, std::mt19937& rng) {
+void TicketManager::Initialize(const SeasonConfigInterface& config,
+                               std::uint32_t now_time, std::mt19937& rng) {
   group_id_allocator_.Initialize(entity_manager_.GetEntities());
+  RebuildGroupIndex(config);
 
-  const std::uint32_t season_type = season_info.type();
+  for (std::uint32_t season_type : config.GetTypes()) {
+    InitializeSeasonType(config, season_type, now_time, rng);
+  }
+}
+
+void TicketManager::InitializeSeasonType(const SeasonConfigInterface& config,
+                                         std::uint32_t season_type,
+                                         std::uint32_t now_time,
+                                         std::mt19937& rng) {
+  config::SeasonInfo season_info;
+  config::SeasonTime season_time;
+  if (!config.GetInfo(season_type, season_info) ||
+      !config.GetTime(season_type, season_time)) {
+    return;
+  }
+
   std::unordered_map<std::uint32_t, std::vector<TicketEntityPtr>>
       in_season_by_grade;
   std::unordered_map<std::uint64_t, std::vector<TicketEntityPtr>>
@@ -76,40 +92,33 @@ void TicketManager::BuildSeason(const config::SeasonInfo& season_info,
       continue;
     }
 
-    // 读取凭据上的赛季时间与段位，再修复时间
+    // 读取凭据上的赛季时间与段位
     config::SeasonTime group_time;
     group_time.set_begin_time(it->second.begin_time());
     group_time.set_end_time(it->second.end_time());
     const std::uint32_t grade = it->second.grade();
     const std::uint64_t group_id = it->second.group_id();
 
-    // 修复赛季时间：以配置为准
-    table::SeasonGroup& mutable_group =
-        (*ticket.mutable_seasons())[season_type];
-    if (mutable_group.begin_time() != season_time.begin_time() ||
-        mutable_group.end_time() != season_time.end_time()) {
-      mutable_group.set_begin_time(season_time.begin_time());
-      mutable_group.set_end_time(season_time.end_time());
-      entity_manager_.SetDirty(ticket.id());
-    }
-
     if (IsInSeason(now_time, group_time)) {
+      // 修复赛季时间：以配置为准
+      table::SeasonGroup& mutable_group =
+          (*ticket.mutable_seasons())[season_type];
+      if (mutable_group.begin_time() != season_time.begin_time() ||
+          mutable_group.end_time() != season_time.end_time()) {
+        mutable_group.set_begin_time(season_time.begin_time());
+        mutable_group.set_end_time(season_time.end_time());
+        entity_manager_.SetDirty(ticket.id());
+      }
       in_season_by_grade[grade].push_back(entity);
     } else {
       out_of_season_by_group[group_id].push_back(entity);
     }
   }
 
-  // 当前赛季分组槽位：按段位维护若干分组，便于后续填入不在赛季内的凭据
-  std::unordered_map<std::uint32_t, std::vector<GroupSlot>> grade_slots;
-
-  // 在当前赛季内的凭据：按当前段位重新分组
-  for (auto& [grade, tickets] : in_season_by_grade) {
-    const config::GradeInfo* grade_info = FindGradeInfo(season_info, grade);
-    std::uint32_t group_size =
-        grade_info != nullptr ? grade_info->group_size() : 0;
-    FormGroupSlots(tickets, group_size, grade, rng, grade_slots[grade]);
-  }
+  // 待分组凭据按段位收集：不在当前赛季内的凭据结算并计算新段位后进入；
+  // 无赛季数据的新凭据使用初始段位进入。
+  std::unordered_map<std::uint32_t, std::vector<TicketEntityPtr>>
+      pending_by_grade;
 
   // 不在当前赛季内的凭据：按原分组结算并计算新段位
   for (const auto& [group_id, group] : out_of_season_by_group) {
@@ -137,27 +146,96 @@ void TicketManager::BuildSeason(const config::SeasonInfo& season_info,
         new_grade = ComputeNextGrade(*grade_info, settlement_it->second.rank(),
                                      settlement_it->second.rank_percent());
       }
-      const config::GradeInfo* new_grade_info =
-          FindGradeInfo(season_info, new_grade);
-      std::uint32_t group_size =
-          new_grade_info != nullptr ? new_grade_info->group_size() : 0;
-      AddToGroupSlots(entity, group_size, new_grade, grade_slots[new_grade]);
+      pending_by_grade[new_grade].push_back(entity);
     }
   }
 
-  // 无赛季数据的凭据：分配初始段位并尝试填入现有分组
+  // 无赛季数据的凭据
   for (const auto& entity : new_entities) {
     std::uint32_t grade = season_info.initial_grade();
+    pending_by_grade[grade].push_back(entity);
+  }
+
+  // 按段位统一填充未满分组并创建新分组
+  std::unordered_map<std::uint32_t, std::vector<GroupSlot>> grade_slots;
+
+  for (auto& [grade, pending] : pending_by_grade) {
+    if (pending.empty()) {
+      continue;
+    }
+
+    // 新加入的待分组凭据先洗牌，再统一填充/建组
+    std::shuffle(pending.begin(), pending.end(), rng);
+
     const config::GradeInfo* grade_info = FindGradeInfo(season_info, grade);
     std::uint32_t group_size =
         grade_info != nullptr ? grade_info->group_size() : 0;
-    AddToGroupSlots(entity, group_size, grade, grade_slots[grade]);
+
+    // 1. 优先填充同段位未满的旧分组（利用索引）
+    auto unfilled_it = unfilled_season_grade_groups_.find({season_type, grade});
+    if (unfilled_it != unfilled_season_grade_groups_.end()) {
+      // WriteSeasonGroups 会修改 unfilled_season_grade_groups_，先复制 ID
+      // 避免迭代器失效
+      std::vector<std::uint64_t> unfilled_groups(unfilled_it->second.begin(),
+                                                 unfilled_it->second.end());
+      for (std::uint64_t existing_group_id : unfilled_groups) {
+        auto tickets_it = group_to_tickets_.find(existing_group_id);
+        if (tickets_it == group_to_tickets_.end()) {
+          continue;
+        }
+        std::size_t current_size = tickets_it->second.size();
+        if (group_size > 0 && current_size >= group_size) {
+          continue;
+        }
+
+        // 创建一个 slot 复用旧 group_id
+        GroupSlot slot;
+        slot.group_id = existing_group_id;
+        slot.grade = grade;
+        while (!pending.empty() &&
+               (group_size == 0 ||
+                current_size + slot.entities.size() < group_size)) {
+          slot.entities.push_back(pending.back());
+          pending.pop_back();
+        }
+        if (!slot.entities.empty()) {
+          grade_slots[grade].push_back(std::move(slot));
+        }
+        if (pending.empty()) {
+          break;
+        }
+      }
+    }
+
+    // 2. 剩余凭据统一创建新分组
+    if (!pending.empty()) {
+      if (group_size == 0) {
+        GroupSlot slot;
+        slot.grade = grade;
+        slot.group_id =
+            group_id_allocator_.Allocate(pending.front()->GetData().zone_id());
+        slot.entities = std::move(pending);
+        grade_slots[grade].push_back(std::move(slot));
+      } else {
+        for (std::size_t i = 0; i < pending.size(); i += group_size) {
+          std::size_t end = std::min(i + group_size, pending.size());
+          GroupSlot slot;
+          slot.grade = grade;
+          slot.group_id =
+              group_id_allocator_.Allocate(pending[i]->GetData().zone_id());
+          slot.entities.assign(
+              std::next(pending.begin(), static_cast<std::ptrdiff_t>(i)),
+              std::next(pending.begin(), static_cast<std::ptrdiff_t>(end)));
+          grade_slots[grade].push_back(std::move(slot));
+        }
+      }
+    }
   }
 
-  // 将最终的分组槽位写入凭据
+  // 将最终的分组槽位写入凭据，由 WriteSeasonGroups 统一维护索引
   for (auto& [grade, slots] : grade_slots) {
     (void)grade;
-    WriteSeasonGroups(slots, season_type, season_time);
+    WriteSeasonGroups(slots, season_type, season_info, season_time);
   }
 }
 
@@ -229,22 +307,39 @@ void TicketManager::NextSeason(const config::SeasonInfo& season_info,
         grade_info != nullptr ? grade_info->group_size() : 0;
     std::vector<GroupSlot> slots;
     FormGroupSlots(std::move(tickets), group_size, grade, rng, slots);
-    WriteSeasonGroups(slots, season_type, season_time);
+    WriteSeasonGroups(slots, season_type, season_info, season_time);
   }
 }
 
-void TicketManager::AddTicket(const config::SeasonInfo& season_info,
-                              const config::SeasonTime& season_time,
-                              std::uint32_t /*now_time*/,
-                              std::uint64_t ticket_id, std::mt19937& rng) {
+void TicketManager::AddTicket(const SeasonConfigInterface& config,
+                              std::uint32_t now_time, std::uint64_t ticket_id,
+                              std::mt19937& rng) {
   group_id_allocator_.Initialize(entity_manager_.GetEntities());
 
-  const std::uint32_t season_type = season_info.type();
   TicketEntityPtr entity = entity_manager_.GetEntity(ticket_id);
   if (entity == nullptr) {
     return;
   }
 
+  for (std::uint32_t season_type : config.GetTypes()) {
+    config::SeasonInfo season_info;
+    config::SeasonTime season_time;
+    if (!config.GetInfo(season_type, season_info) ||
+        !config.GetTime(season_type, season_time)) {
+      continue;
+    }
+
+    AddTicketToSeason(entity, season_type, season_info, season_time, now_time,
+                      rng);
+  }
+}
+
+void TicketManager::AddTicketToSeason(const TicketEntityPtr& entity,
+                                      std::uint32_t season_type,
+                                      const config::SeasonInfo& season_info,
+                                      const config::SeasonTime& season_time,
+                                      std::uint32_t now_time,
+                                      std::mt19937& rng) {
   auto& ticket = entity->GetData();
   auto it = ticket.seasons().find(season_type);
   if (it == ticket.seasons().end()) {
@@ -252,19 +347,45 @@ void TicketManager::AddTicket(const config::SeasonInfo& season_info,
     const config::GradeInfo* grade_info = FindGradeInfo(season_info, grade);
     std::uint32_t group_size =
         grade_info != nullptr ? grade_info->group_size() : 0;
+
+    // 优先填入同段位未满旧分组
+    auto unfilled_it = unfilled_season_grade_groups_.find({season_type, grade});
+    if (unfilled_it != unfilled_season_grade_groups_.end() &&
+        !unfilled_it->second.empty()) {
+      std::uint64_t existing_group_id = *unfilled_it->second.begin();
+      auto tickets_it = group_to_tickets_.find(existing_group_id);
+      if (tickets_it != group_to_tickets_.end() &&
+          (group_size == 0 || tickets_it->second.size() < group_size)) {
+        std::vector<GroupSlot> slots;
+        GroupSlot slot;
+        slot.group_id = existing_group_id;
+        slot.grade = grade;
+        slot.entities.push_back(entity);
+        slots.push_back(std::move(slot));
+        WriteSeasonGroups(slots, season_type, season_info, season_time);
+        return;
+      }
+    }
+
+    // 无未满旧分组，创建新分组
     std::vector<GroupSlot> slots;
     FormGroupSlots({entity}, group_size, grade, rng, slots);
-    WriteSeasonGroups(slots, season_type, season_time);
+    WriteSeasonGroups(slots, season_type, season_info, season_time);
     return;
   }
 
-  // 已存在赛季分组时，确保时间与配置一致
-  table::SeasonGroup& group = (*ticket.mutable_seasons())[season_type];
-  if (group.begin_time() != season_time.begin_time() ||
-      group.end_time() != season_time.end_time()) {
-    group.set_begin_time(season_time.begin_time());
-    group.set_end_time(season_time.end_time());
-    entity_manager_.SetDirty(ticket.id());
+  // 已存在赛季分组时，仅在当前赛季内修复时间
+  config::SeasonTime group_time;
+  group_time.set_begin_time(it->second.begin_time());
+  group_time.set_end_time(it->second.end_time());
+  if (IsInSeason(now_time, group_time)) {
+    table::SeasonGroup& group = (*ticket.mutable_seasons())[season_type];
+    if (group.begin_time() != season_time.begin_time() ||
+        group.end_time() != season_time.end_time()) {
+      group.set_begin_time(season_time.begin_time());
+      group.set_end_time(season_time.end_time());
+      entity_manager_.SetDirty(ticket.id());
+    }
   }
 }
 
@@ -367,39 +488,36 @@ void TicketManager::FormGroupSlots(std::vector<TicketEntityPtr> tickets,
   }
 }
 
-void TicketManager::AddToGroupSlots(const TicketEntityPtr& entity,
-                                    std::uint32_t group_size,
-                                    std::uint32_t grade,
-                                    std::vector<GroupSlot>& slots) {
-  if (group_size == 0) {
-    if (!slots.empty()) {
-      slots.front().entities.push_back(entity);
-      return;
-    }
-  } else {
-    for (auto& slot : slots) {
-      if (slot.entities.size() < group_size) {
-        slot.entities.push_back(entity);
-        return;
-      }
-    }
-  }
-
-  GroupSlot slot;
-  slot.grade = grade;
-  slot.group_id = group_id_allocator_.Allocate(entity->GetData().zone_id());
-  slot.entities.push_back(entity);
-  slots.push_back(std::move(slot));
-}
-
 void TicketManager::WriteSeasonGroups(std::vector<GroupSlot>& slots,
                                       std::uint32_t season_type,
+                                      const config::SeasonInfo& season_info,
                                       const config::SeasonTime& season_time) {
   for (auto& slot : slots) {
     if (slot.entities.empty()) {
       continue;
     }
 
+    // 1. 从旧分组索引中移除这些凭据，并记录受影响的旧分组
+    std::unordered_map<std::uint64_t, std::uint32_t> affected_old_groups;
+    for (const auto& entity : slot.entities) {
+      const auto& ticket = entity->GetData();
+      auto it = ticket.seasons().find(season_type);
+      if (it != ticket.seasons().end()) {
+        std::uint64_t old_group_id = it->second.group_id();
+        std::uint32_t old_grade = it->second.grade();
+        group_to_tickets_[old_group_id].erase(ticket.id());
+        if (group_to_tickets_[old_group_id].empty()) {
+          group_to_tickets_.erase(old_group_id);
+          season_grade_to_groups_[{season_type, old_grade}].erase(old_group_id);
+          unfilled_season_grade_groups_[{season_type, old_grade}].erase(
+              old_group_id);
+        } else {
+          affected_old_groups[old_group_id] = old_grade;
+        }
+      }
+    }
+
+    // 2. 写入新的 SeasonGroup
     for (const auto& entity : slot.entities) {
       auto& ticket = entity->GetData();
       table::SeasonGroup& group = (*ticket.mutable_seasons())[season_type];
@@ -409,6 +527,91 @@ void TicketManager::WriteSeasonGroups(std::vector<GroupSlot>& slots,
       group.set_grade(slot.grade);
       group.set_group_id(slot.group_id);
       entity_manager_.SetDirty(ticket.id());
+    }
+
+    // 3. 建立新分组索引
+    season_grade_to_groups_[{season_type, slot.grade}].insert(slot.group_id);
+    for (const auto& entity : slot.entities) {
+      group_to_tickets_[slot.group_id].insert(entity->GetData().id());
+    }
+
+    // 4. 维护新分组未满索引
+    const config::GradeInfo* grade_info =
+        FindGradeInfo(season_info, slot.grade);
+    std::uint32_t group_size =
+        grade_info != nullptr ? grade_info->group_size() : 0;
+    if (group_size == 0 || slot.entities.size() < group_size) {
+      unfilled_season_grade_groups_[{season_type, slot.grade}].insert(
+          slot.group_id);
+    } else {
+      unfilled_season_grade_groups_[{season_type, slot.grade}].erase(
+          slot.group_id);
+    }
+
+    // 5. 维护受影响的旧分组未满索引
+    for (const auto& [old_group_id, old_grade] : affected_old_groups) {
+      auto tickets_it = group_to_tickets_.find(old_group_id);
+      if (tickets_it == group_to_tickets_.end()) {
+        continue;
+      }
+      const config::GradeInfo* old_grade_info =
+          FindGradeInfo(season_info, old_grade);
+      std::uint32_t old_group_size =
+          old_grade_info != nullptr ? old_grade_info->group_size() : 0;
+      if (old_group_size == 0 || tickets_it->second.size() < old_group_size) {
+        unfilled_season_grade_groups_[{season_type, old_grade}].insert(
+            old_group_id);
+      } else {
+        unfilled_season_grade_groups_[{season_type, old_grade}].erase(
+            old_group_id);
+      }
+    }
+  }
+}
+
+std::vector<std::uint64_t> TicketManager::GetGroupTicketIds(
+    std::uint32_t /*season_type*/, std::uint64_t group_id) const {
+  auto it = group_to_tickets_.find(group_id);
+  if (it == group_to_tickets_.end()) {
+    return {};
+  }
+  return std::vector<std::uint64_t>(it->second.begin(), it->second.end());
+}
+
+void TicketManager::RebuildGroupIndex(const SeasonConfigInterface& config) {
+  season_grade_to_groups_.clear();
+  group_to_tickets_.clear();
+  unfilled_season_grade_groups_.clear();
+
+  // 1. 扫描所有凭据，建立 season/grade -> group_ids 与 group_id -> ticket_ids
+  for (const auto& [id, entity] : entity_manager_.GetEntities()) {
+    (void)id;
+    const auto& ticket = entity->GetData();
+    for (const auto& [season_type, group] : ticket.seasons()) {
+      season_grade_to_groups_[{season_type, group.grade()}].insert(
+          group.group_id());
+      group_to_tickets_[group.group_id()].insert(ticket.id());
+    }
+  }
+
+  // 2. 根据配置计算哪些分组未满
+  for (const auto& [key, groups] : season_grade_to_groups_) {
+    const auto& [season_type, grade] = key;
+    config::SeasonInfo season_info;
+    if (!config.GetInfo(season_type, season_info)) {
+      continue;
+    }
+    const config::GradeInfo* grade_info = FindGradeInfo(season_info, grade);
+    std::uint32_t group_size =
+        grade_info != nullptr ? grade_info->group_size() : 0;
+    for (std::uint64_t group_id : groups) {
+      auto it = group_to_tickets_.find(group_id);
+      if (it == group_to_tickets_.end()) {
+        continue;
+      }
+      if (group_size == 0 || it->second.size() < group_size) {
+        unfilled_season_grade_groups_[key].insert(group_id);
+      }
     }
   }
 }

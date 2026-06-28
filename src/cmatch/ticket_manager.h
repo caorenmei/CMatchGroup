@@ -7,9 +7,12 @@
 #include <cstdint>
 #include <random>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "cmatch/config.pb.h"
+#include "cmatch/season_config_interface.h"
 #include "cmatch/ticket_entity_manager_interface.h"
 
 namespace cmatch {
@@ -33,13 +36,11 @@ class TicketManager {
   /// -
   /// 不在当前赛季内：按原分组结算、计算新段位、优先填入当前赛季同段位未满分组。
   /// 同时修复凭据上的赛季时间与配置不一致的问题。
-  /// @param[in] season_info 赛季信息
-  /// @param[in] season_time 赛季时间
+  /// @param[in] config 赛季配置接口
   /// @param[in] now_time 当前时间
   /// @param[in,out] rng 随机数引擎
-  void BuildSeason(const config::SeasonInfo& season_info,
-                   const config::SeasonTime& season_time,
-                   std::uint32_t now_time, std::mt19937& rng);
+  void Initialize(const SeasonConfigInterface& config, std::uint32_t now_time,
+                  std::mt19937& rng);
 
   /// @brief 切换赛季
   ///
@@ -53,18 +54,23 @@ class TicketManager {
                   const config::SeasonTime& season_time, std::uint32_t now_time,
                   std::mt19937& rng);
 
-  /// @brief 新加入的凭据，遍历每个赛事类型调用一次
+  /// @brief 新加入的凭据，由外部调用一次
   ///
-  /// 若凭据无对应赛季分组，则分配初始段位并创建新的 SeasonGroup；
-  /// 若已存在赛季分组，则确保其时间与配置一致。
-  /// @param[in] season_info 赛季信息
-  /// @param[in] season_time 赛季时间
+  /// 内部遍历所有已配置的赛事类型，为凭据分配初始段位并优先填入同段位未满旧分组；
+  /// 若已存在赛季分组且凭据上的时间位于当前赛季内，则修复其时间为配置值。
+  /// @param[in] config 赛季配置接口
   /// @param[in] now_time 当前时间
   /// @param[in] ticket_id 新凭据 ID
   /// @param[in,out] rng 随机数引擎
-  void AddTicket(const config::SeasonInfo& season_info,
-                 const config::SeasonTime& season_time, std::uint32_t now_time,
+  void AddTicket(const SeasonConfigInterface& config, std::uint32_t now_time,
                  std::uint64_t ticket_id, std::mt19937& rng);
+
+  /// @brief 获取指定分组内的凭据 ID 列表
+  /// @param[in] season_type 赛季类型
+  /// @param[in] group_id 分组 ID
+  /// @return 凭据 ID 列表（顺序不做保证）
+  std::vector<std::uint64_t> GetGroupTicketIds(std::uint32_t season_type,
+                                               std::uint64_t group_id) const;
 
  private:
   // 分组 ID 分配器，高 32 位为 zone_id，低 32 位为自增编号
@@ -118,12 +124,55 @@ class TicketManager {
                       std::uint32_t group_size, std::uint32_t grade,
                       std::mt19937& rng, std::vector<GroupSlot>& slots);
 
-  void AddToGroupSlots(const TicketEntityPtr& entity, std::uint32_t group_size,
-                       std::uint32_t grade, std::vector<GroupSlot>& slots);
-
   void WriteSeasonGroups(std::vector<GroupSlot>& slots,
                          std::uint32_t season_type,
+                         const config::SeasonInfo& season_info,
                          const config::SeasonTime& season_time);
+
+  /// @brief 逐个赛事类型完成初始化
+  /// @param[in] config 赛季配置接口
+  /// @param[in] season_type 赛季类型
+  /// @param[in] now_time 当前时间
+  /// @param[in,out] rng 随机数引擎
+  void InitializeSeasonType(const SeasonConfigInterface& config,
+                            std::uint32_t season_type, std::uint32_t now_time,
+                            std::mt19937& rng);
+
+  /// @brief 根据当前凭据数据重建分组索引
+  /// @param[in] config 赛季配置接口
+  void RebuildGroupIndex(const SeasonConfigInterface& config);
+
+  /// @brief 为单个赛事类型处理新凭据
+  /// @param[in] entity 凭据实体
+  /// @param[in] season_type 赛季类型
+  /// @param[in] season_info 赛季信息
+  /// @param[in] season_time 赛季时间
+  /// @param[in] now_time 当前时间
+  /// @param[in,out] rng 随机数引擎
+  void AddTicketToSeason(const TicketEntityPtr& entity,
+                         std::uint32_t season_type,
+                         const config::SeasonInfo& season_info,
+                         const config::SeasonTime& season_time,
+                         std::uint32_t now_time, std::mt19937& rng);
+
+  // 用于 pair 键的哈希辅助结构
+  struct PairHash {
+    std::size_t operator()(
+        const std::pair<std::uint32_t, std::uint32_t>& p) const noexcept {
+      return (std::hash<std::uint32_t>{}(p.first) * 31) +
+             std::hash<std::uint32_t>{}(p.second);
+    }
+  };
+
+  // 分组索引
+  std::unordered_map<std::pair<std::uint32_t, std::uint32_t>,
+                     std::unordered_set<std::uint64_t>, PairHash>
+      season_grade_to_groups_;
+  std::unordered_map<std::uint64_t, std::unordered_set<std::uint64_t>>
+      group_to_tickets_;
+  std::unordered_map<std::pair<std::uint32_t, std::uint32_t>,
+                     std::unordered_set<std::uint64_t>, PairHash>
+      unfilled_season_grade_groups_;
 
   TicketEntityManagerInterface& entity_manager_;
   GroupIdAllocator group_id_allocator_;

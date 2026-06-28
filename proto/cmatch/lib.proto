@@ -154,7 +154,7 @@ message RemoveSettlementListReq {
   // 凭据 ID
   uint64 id = 1;
   // 结算 ID 列表，实际对应赛季类型
-  repeated uint64 settlement_ids = 2;
+  repeated uint32 settlement_ids = 2;
 }
 
 message RemoveSettlementListResp {

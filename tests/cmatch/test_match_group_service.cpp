@@ -52,7 +52,6 @@ config::SeasonInfo MakeSeasonInfo(std::uint32_t season_type) {
   config::SeasonInfo info;
   info.set_type(season_type);
   info.set_initial_score(1000);
-  info.set_min_score(0);
   info.set_score_attr_id(1);
   info.set_reset_score(false);
   info.set_initial_grade(1);
@@ -253,6 +252,9 @@ TEST_F(MatchGroupServiceTest, GetGroupMembersReturnsMap) {
     group.set_grade(1);
     group.set_group_id(555);
   }
+
+  std::mt19937 rng(12345);
+  ticket_manager_->Initialize(*config_, 50, rng);
 
   auto req = std::make_shared<lib::GetGroupMembersReq>();
   req->set_type(1);
