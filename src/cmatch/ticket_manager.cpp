@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "cmatch/season_config_interface.h"
 #include "cmatch/table.pb.h"
 #include "cmatch/ticket_entity_interface.h"
 #include "cmatch/ticket_entity_manager_interface.h"
@@ -55,12 +56,25 @@ struct GroupSlot {
 TicketManager::TicketManager(TicketEntityManagerInterface& entity_manager)
     : entity_manager_(entity_manager) {}
 
-void TicketManager::Initialize(const config::SeasonInfo& season_info,
-                               const config::SeasonTime& season_time,
+void TicketManager::Initialize(const SeasonConfigInterface& config,
                                std::uint32_t now_time, std::mt19937& rng) {
   group_id_allocator_.Initialize(entity_manager_.GetEntities());
 
-  const std::uint32_t season_type = season_info.type();
+  for (std::uint32_t season_type : config.GetTypes()) {
+    InitializeSeasonType(config, season_type, now_time, rng);
+  }
+}
+
+void TicketManager::InitializeSeasonType(
+    const SeasonConfigInterface& config, std::uint32_t season_type,
+    std::uint32_t now_time, std::mt19937& rng) {
+  config::SeasonInfo season_info;
+  config::SeasonTime season_time;
+  if (!config.GetInfo(season_type, season_info) ||
+      !config.GetTime(season_type, season_time)) {
+    return;
+  }
+
   std::unordered_map<std::uint32_t, std::vector<TicketEntityPtr>>
       in_season_by_grade;
   std::unordered_map<std::uint64_t, std::vector<TicketEntityPtr>>

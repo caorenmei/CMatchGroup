@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "cmatch/config.pb.h"
+#include "cmatch/season_config_interface.h"
 #include "cmatch/ticket_entity_manager_interface.h"
 
 namespace cmatch {
@@ -33,13 +34,11 @@ class TicketManager {
   /// -
   /// 不在当前赛季内：按原分组结算、计算新段位、优先填入当前赛季同段位未满分组。
   /// 同时修复凭据上的赛季时间与配置不一致的问题。
-  /// @param[in] season_info 赛季信息
-  /// @param[in] season_time 赛季时间
+  /// @param[in] config 赛季配置接口
   /// @param[in] now_time 当前时间
   /// @param[in,out] rng 随机数引擎
-  void Initialize(const config::SeasonInfo& season_info,
-                  const config::SeasonTime& season_time,
-                  std::uint32_t now_time, std::mt19937& rng);
+  void Initialize(const SeasonConfigInterface& config, std::uint32_t now_time,
+                  std::mt19937& rng);
 
   /// @brief 切换赛季
   ///
@@ -124,6 +123,15 @@ class TicketManager {
   void WriteSeasonGroups(std::vector<GroupSlot>& slots,
                          std::uint32_t season_type,
                          const config::SeasonTime& season_time);
+
+  /// @brief 逐个赛事类型完成初始化
+  /// @param[in] config 赛季配置接口
+  /// @param[in] season_type 赛季类型
+  /// @param[in] now_time 当前时间
+  /// @param[in,out] rng 随机数引擎
+  void InitializeSeasonType(const SeasonConfigInterface& config,
+                            std::uint32_t season_type, std::uint32_t now_time,
+                            std::mt19937& rng);
 
   TicketEntityManagerInterface& entity_manager_;
   GroupIdAllocator group_id_allocator_;

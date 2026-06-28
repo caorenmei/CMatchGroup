@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cmatch/config.pb.h"
+#include "cmatch/season_config_interface.h"
 #include "cmatch/ticket_manager.h"
 #include "mock_ticket_entity_manager.h"
 
@@ -64,6 +65,44 @@ void SetScore(const TicketEntityPtr& entity, std::uint32_t attr_id,
   (*entity->GetData().mutable_attributes())[attr_id] = score;
 }
 
+class MockSeasonConfig : public SeasonConfigInterface {
+ public:
+  explicit MockSeasonConfig(config::SeasonInfo info) : info_(std::move(info)) {}
+
+  std::vector<std::uint32_t> GetTypes() const override {
+    return {info_.type()};
+  }
+
+  bool GetInfo(std::uint32_t type, config::SeasonInfo& info) const override {
+    if (type != info_.type()) {
+      return false;
+    }
+    info = info_;
+    return true;
+  }
+
+  bool GetTime(std::uint32_t type, config::SeasonTime& time) const override {
+    if (type != info_.type()) {
+      return false;
+    }
+    time = time_;
+    return true;
+  }
+
+  void SetTime(const config::SeasonTime& time) { time_ = time; }
+
+ private:
+  config::SeasonInfo info_;
+  config::SeasonTime time_;
+};
+
+MockSeasonConfig MakeMockConfig(const config::SeasonInfo& info,
+                                const config::SeasonTime& time) {
+  MockSeasonConfig config(info);
+  config.SetTime(time);
+  return config;
+}
+
 TEST(ExceptionHandlingTest, RepairsSeasonTimeMismatch) {
   testing::MockTicketEntityManager manager;
   TicketManager tm(manager);
@@ -83,7 +122,7 @@ TEST(ExceptionHandlingTest, RepairsSeasonTimeMismatch) {
   }
 
   std::mt19937 rng(12345);
-  tm.Initialize(info, config_time, 150, rng);
+  tm.Initialize(MakeMockConfig(info, config_time), 150, rng);
 
   const auto& group = entity->GetData().seasons().at(1);
   EXPECT_EQ(group.begin_time(), config_time.begin_time());
@@ -126,7 +165,7 @@ TEST(ExceptionHandlingTest, OutOfSeasonTicketsAreSettledAndAdded) {
   }
 
   std::mt19937 rng(12345);
-  tm.Initialize(info, new_time, 150, rng);
+  tm.Initialize(MakeMockConfig(info, new_time), 150, rng);
 
   // Out-of-season ticket should be settled and then grouped in current season
   ASSERT_EQ(out_of_season->GetData().settlements().count(1), 1);
@@ -176,7 +215,7 @@ TEST(ExceptionHandlingTest, AlreadySettledTicketsAreNotOverwritten) {
   }
 
   std::mt19937 rng(12345);
-  tm.Initialize(info, new_time, 150, rng);
+  tm.Initialize(MakeMockConfig(info, new_time), 150, rng);
 
   // entity1 settlement should remain unchanged
   EXPECT_EQ(entity1->GetData().settlements().at(1).rank(), 99);
@@ -268,7 +307,7 @@ TEST(ExceptionHandlingTest, MergedServerGroupIdsDoNotConflict) {
 
   // Both are in season, will be regrouped with new unique IDs
   std::mt19937 rng(12345);
-  tm.Initialize(info, time, 50, rng);
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
   std::unordered_set<std::uint64_t> group_ids;
   for (const auto& [id, entity] : manager.GetEntities()) {

@@ -96,6 +96,13 @@ void SetScore(const TicketEntityPtr& entity, std::uint32_t attr_id,
   (*entity->GetData().mutable_attributes())[attr_id] = score;
 }
 
+MockSeasonConfig MakeMockConfig(const config::SeasonInfo& info,
+                                const config::SeasonTime& time) {
+  MockSeasonConfig config(info);
+  config.SetTime(time);
+  return config;
+}
+
 TEST(TicketManagerTest, IsInSeasonBoundaries) {
   testing::MockTicketEntityManager manager;
   TicketManager tm(manager);
@@ -108,16 +115,16 @@ TEST(TicketManagerTest, IsInSeasonBoundaries) {
   SetScore(manager.GetEntity(1), info.score_attr_id(), 0);
 
   // now_time == begin_time: in season
-  tm.Initialize(info, time, 100, rng);
+  tm.Initialize(MakeMockConfig(info, time), 100, rng);
   EXPECT_TRUE(manager.GetEntity(1)->GetData().seasons().at(1).begin_time() ==
               time.begin_time());
 
   // now_time == end_time - 1: in season
-  tm.Initialize(info, time, 199, rng);
+  tm.Initialize(MakeMockConfig(info, time), 199, rng);
   EXPECT_EQ(manager.GetEntity(1)->GetData().seasons().count(1), 1);
 
   // now_time == end_time: out of season -> settlement
-  tm.Initialize(info, time, 200, rng);
+  tm.Initialize(MakeMockConfig(info, time), 200, rng);
   EXPECT_EQ(manager.GetEntity(1)->GetData().settlements().count(1), 1);
 }
 
@@ -143,7 +150,7 @@ TEST(TicketManagerTest, SettlementRankingAndPercentage) {
   }
 
   // Build season with now_time out of season to force settlement
-  tm.Initialize(info, time, 200, rng);
+  tm.Initialize(MakeMockConfig(info, time), 200, rng);
 
   ASSERT_EQ(manager.GetEntity(1)->GetData().settlements().count(1), 1);
   const auto& settlement1 = manager.GetEntity(1)->GetData().settlements().at(1);
@@ -188,7 +195,7 @@ TEST(TicketManagerTest, SettlementTieBreakById) {
     group.set_group_id(2001);
   }
 
-  tm.Initialize(info, time, 200, rng);
+  tm.Initialize(MakeMockConfig(info, time), 200, rng);
 
   const auto& settlement1 = manager.GetEntity(1)->GetData().settlements().at(1);
   const auto& settlement2 = manager.GetEntity(2)->GetData().settlements().at(1);
@@ -351,7 +358,7 @@ TEST(TicketManagerTest, RandomGroupFormation) {
   }
 
   std::mt19937 rng(12345);
-  tm.Initialize(info, time, 50, rng);
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
   // group_size = 2 -> 2 groups
   std::unordered_map<std::uint64_t, std::size_t> group_sizes;
@@ -381,7 +388,7 @@ TEST(TicketManagerTest, GroupSizeZeroFormsSingleGroup) {
     SetScore(entity, info.score_attr_id(), id * 10);
   }
 
-  tm.Initialize(info, time, 50, rng);
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
   std::unordered_set<std::uint64_t> group_ids;
   for (const auto& [id, entity] : manager.GetEntities()) {
@@ -407,7 +414,7 @@ TEST(TicketManagerTest, RemainderFormsGroup) {
     SetScore(entity, info.score_attr_id(), id * 10);
   }
 
-  tm.Initialize(info, time, 50, rng);
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
   std::unordered_map<std::uint64_t, std::size_t> group_sizes;
   for (const auto& [id, entity] : manager.GetEntities()) {
@@ -473,7 +480,7 @@ TEST(TicketManagerTest, InitializeRegroupsInSeasonTickets) {
     group.set_group_id(999);
   }
 
-  tm.Initialize(info, time, 50, rng);
+  tm.Initialize(MakeMockConfig(info, time), 50, rng);
 
   // Should be reassigned to new unique group ids
   std::unordered_set<std::uint64_t> group_ids;
