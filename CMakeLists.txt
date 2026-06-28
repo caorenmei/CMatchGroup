@@ -49,3 +49,15 @@ install(
   "${PROJECT_BINARY_DIR}/CMatchGroupConfigVersion.cmake"
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CMatchGroup"
 )
+
+# Doxygen 文档生成目标（可选）
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+  add_custom_target(
+    docs
+    COMMAND ${DOXYGEN_EXECUTABLE} ${PROJECT_SOURCE_DIR}/Doxyfile
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "使用 Doxygen 生成项目文档"
+    VERBATIM
+  )
+endif()
