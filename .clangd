@@ -1,0 +1,39 @@
+# clangd 语言服务器配置文件
+# 详见：https://clangd.llvm.org/config
+
+CompileFlags:
+  # 指定编译数据库路径，使 clangd 能够正确解析项目编译配置
+  CompilationDatabase: build/debug
+  Add:
+    - -std=c++20
+    - -Wall
+    - -Wextra
+    - -Wpedantic
+
+Diagnostics:
+  # 通过 clangd 内置的 ClangTidy 执行静态分析
+  ClangTidy:
+    Add:
+      - bugprone-*
+      - cppcoreguidelines-*
+      - google-*
+      - performance-*
+      - portability-*
+      - readability-*
+    Remove:
+      - bugprone-easily-swappable-parameters
+      - cppcoreguidelines-avoid-const-or-ref-data-members
+      - cppcoreguidelines-avoid-magic-numbers
+      - cppcoreguidelines-non-private-member-variables-in-classes
+      - cppcoreguidelines-special-member-functions
+      - readability-function-cognitive-complexity
+      - readability-identifier-length
+      - readability-magic-numbers
+      - readability-named-parameter
+      - google-build-using-namespace
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+  Designators: Yes

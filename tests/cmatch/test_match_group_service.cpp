@@ -9,7 +9,7 @@
 
 #include "cmatch/config.pb.h"
 #include "cmatch/lib.pb.h"
-#include "cmatch/match_group_service_default.h"
+#include "cmatch/match_group_service_impl.h"
 #include "cmatch/season_config_interface.h"
 #include "cmatch/ticket_manager.h"
 #include "mock_ticket_entity_manager.h"
@@ -89,8 +89,8 @@ class MatchGroupServiceTest : public ::testing::Test {
     config_->SetTime(time_);
     manager_ = std::make_unique<testing::MockTicketEntityManager>();
     ticket_manager_ = std::make_unique<TicketManager>(*manager_);
-    service_ = std::make_unique<MatchGroupServiceDefault>(*config_, *manager_,
-                                                          *ticket_manager_);
+    service_ = std::make_unique<MatchGroupServiceImpl>(*config_, *manager_,
+                                                       *ticket_manager_);
   }
 
   config::SeasonInfo info_;
@@ -98,7 +98,7 @@ class MatchGroupServiceTest : public ::testing::Test {
   std::unique_ptr<MockSeasonConfig> config_;
   std::unique_ptr<testing::MockTicketEntityManager> manager_;
   std::unique_ptr<TicketManager> ticket_manager_;
-  std::unique_ptr<MatchGroupServiceDefault> service_;
+  std::unique_ptr<MatchGroupServiceImpl> service_;
 };
 
 TEST_F(MatchGroupServiceTest, GetSeasonListReturnsConfiguredSeasons) {

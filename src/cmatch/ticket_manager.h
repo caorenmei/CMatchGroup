@@ -3,11 +3,13 @@
 #ifndef CMATCH_SRC_CMATCH_TICKET_MANAGER_H_
 #define CMATCH_SRC_CMATCH_TICKET_MANAGER_H_
 
+#include <algorithm>
 #include <cstdint>
-#include <memory>
 #include <random>
+#include <unordered_map>
+#include <vector>
 
-#include "cmatch/season_config_interface.h"
+#include "cmatch/config.pb.h"
 #include "cmatch/ticket_entity_manager_interface.h"
 
 namespace cmatch {
@@ -15,15 +17,14 @@ namespace cmatch {
 /// @brief 凭据管理器
 ///
 /// 负责赛季分组、结算、段位升降等核心匹配算法。
-/// 采用 Pimpl
-/// 模式隐藏实现细节，所有公共方法均为线程不安全，需由调用方保证同步。
+/// 所有公共方法均为线程不安全，需由调用方保证同步。
 class TicketManager {
  public:
   /// @brief 构造函数
   /// @param[in] entity_manager 凭据实体管理器引用
   explicit TicketManager(TicketEntityManagerInterface& entity_manager);
 
-  ~TicketManager();
+  ~TicketManager() = default;
 
   /// @brief 实体加载完成后，遍历每个赛事类型调用一次
   ///
@@ -66,8 +67,66 @@ class TicketManager {
                  std::uint64_t ticket_id, std::mt19937& rng);
 
  private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
+  // 分组 ID 分配器，高 32 位为 zone_id，低 32 位为自增编号
+  struct GroupIdAllocator {
+    std::uint32_t next_sequence_ = 1;
+
+    void Initialize(
+        const std::unordered_map<std::uint64_t, TicketEntityPtr>& entities) {
+      std::uint32_t max_sequence = 0;
+      for (const auto& [id, entity] : entities) {
+        (void)id;
+        const auto& ticket = entity->GetData();
+        for (const auto& [type, group] : ticket.seasons()) {
+          (void)type;
+          max_sequence = std::max(max_sequence,
+                                  static_cast<std::uint32_t>(group.group_id()));
+        }
+        for (const auto& [type, settlement] : ticket.settlements()) {
+          (void)type;
+          max_sequence = std::max(
+              max_sequence, static_cast<std::uint32_t>(settlement.group_id()));
+        }
+      }
+      next_sequence_ = max_sequence + 1;
+    }
+
+    std::uint64_t Allocate(std::uint32_t zone_id) {
+      std::uint64_t group_id =
+          (static_cast<std::uint64_t>(zone_id) << 32) | next_sequence_;
+      ++next_sequence_;
+      return group_id;
+    }
+  };
+
+  // 分组槽位，延迟写入 SeasonGroup
+  struct GroupSlot {
+    std::uint64_t group_id = 0;
+    std::uint32_t grade = 0;
+    std::vector<TicketEntityPtr> entities;
+  };
+
+  static std::uint32_t ComputeNextGrade(const config::GradeInfo& grade_info,
+                                        std::uint32_t rank, float rank_percent);
+
+  void SettleGroup(const std::vector<TicketEntityPtr>& group,
+                   std::uint32_t season_type,
+                   const config::SeasonTime& season_time, std::uint32_t grade,
+                   std::uint32_t score_attr_id);
+
+  void FormGroupSlots(std::vector<TicketEntityPtr> tickets,
+                      std::uint32_t group_size, std::uint32_t grade,
+                      std::mt19937& rng, std::vector<GroupSlot>& slots);
+
+  void AddToGroupSlots(const TicketEntityPtr& entity, std::uint32_t group_size,
+                       std::uint32_t grade, std::vector<GroupSlot>& slots);
+
+  void WriteSeasonGroups(std::vector<GroupSlot>& slots,
+                         std::uint32_t season_type,
+                         const config::SeasonTime& season_time);
+
+  TicketEntityManagerInterface& entity_manager_;
+  GroupIdAllocator group_id_allocator_;
 };
 
 }  // namespace cmatch

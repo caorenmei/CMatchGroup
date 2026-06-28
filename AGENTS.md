@@ -13,6 +13,8 @@
 - 编译器：g++
 - C++ 标准：C++20
 - 代码规范：Google C++ Style Guide
+- C/C++ 语言服务器：clangd
+- 静态分析：通过 clangd 内置的 ClangTidy 执行
 
 ## 测试环境
 
@@ -40,7 +42,7 @@
   - `cmake --build --preset ninja-debug` 构建成功。
   - `ctest --preset ninja-debug` 全部测试通过。
   - `clang-format` 已应用，代码格式符合 Google C++ Style。
-  - `clang-tidy` 静态分析无新增警告。
+  - `clangd` 静态分析无新增警告。
 
 ## 文档规范
 

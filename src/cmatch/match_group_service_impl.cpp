@@ -1,6 +1,6 @@
-// 匹配分组服务默认实现
+// 匹配分组服务实现
 
-#include "cmatch/match_group_service_default.h"
+#include "cmatch/match_group_service_impl.h"
 
 #include <cstdint>
 #include <limits>
@@ -15,16 +15,16 @@
 
 namespace cmatch {
 
-MatchGroupServiceDefault::MatchGroupServiceDefault(
+MatchGroupServiceImpl::MatchGroupServiceImpl(
     SeasonConfigInterface& config, TicketEntityManagerInterface& entity_manager,
     TicketManager& ticket_manager)
     : config_(config),
       entity_manager_(entity_manager),
       ticket_manager_(ticket_manager) {}
 
-void MatchGroupServiceDefault::GetSeasonList(
+void MatchGroupServiceImpl::GetSeasonList(
     const std::shared_ptr<lib::GetSeasonListReq>& /*request*/,
-    std::function<void(const lib::GetSeasonListResp&)> done) {
+    const std::function<void(const lib::GetSeasonListResp&)>& done) {
   lib::GetSeasonListResp resp;
   resp.set_result(lib::OK);
 
@@ -42,9 +42,9 @@ void MatchGroupServiceDefault::GetSeasonList(
   done(resp);
 }
 
-void MatchGroupServiceDefault::SubmitTicket(
+void MatchGroupServiceImpl::SubmitTicket(
     const std::shared_ptr<lib::SubmitTicketReq>& request,
-    std::function<void(const lib::SubmitTicketResp&)> done) {
+    const std::function<void(const lib::SubmitTicketResp&)>& done) {
   lib::SubmitTicketResp resp;
 
   const std::uint64_t id = request->ticket().id();
@@ -75,9 +75,9 @@ void MatchGroupServiceDefault::SubmitTicket(
   done(resp);
 }
 
-void MatchGroupServiceDefault::GetTicket(
+void MatchGroupServiceImpl::GetTicket(
     const std::shared_ptr<lib::GetTicketReq>& request,
-    std::function<void(const lib::GetTicketResp&)> done) {
+    const std::function<void(const lib::GetTicketResp&)>& done) {
   lib::GetTicketResp resp;
   const std::uint64_t id = request->id();
 
@@ -112,9 +112,9 @@ void MatchGroupServiceDefault::GetTicket(
   done(resp);
 }
 
-void MatchGroupServiceDefault::RegisterSeason(
+void MatchGroupServiceImpl::RegisterSeason(
     const std::shared_ptr<lib::RegisterSeasonReq>& request,
-    std::function<void(const lib::RegisterSeasonResp&)> done) {
+    const std::function<void(const lib::RegisterSeasonResp&)>& done) {
   lib::RegisterSeasonResp resp;
   const std::uint64_t id = request->id();
 
@@ -147,9 +147,9 @@ void MatchGroupServiceDefault::RegisterSeason(
   done(resp);
 }
 
-void MatchGroupServiceDefault::GetTicketList(
+void MatchGroupServiceImpl::GetTicketList(
     const std::shared_ptr<lib::GetTicketListReq>& request,
-    std::function<void(const lib::GetTicketListResp&)> done) {
+    const std::function<void(const lib::GetTicketListResp&)>& done) {
   lib::GetTicketListResp resp;
   resp.set_result(lib::OK);
 
@@ -170,9 +170,9 @@ void MatchGroupServiceDefault::GetTicketList(
   done(resp);
 }
 
-void MatchGroupServiceDefault::GetGroupMembers(
+void MatchGroupServiceImpl::GetGroupMembers(
     const std::shared_ptr<lib::GetGroupMembersReq>& request,
-    std::function<void(const lib::GetGroupMembersResp&)> done) {
+    const std::function<void(const lib::GetGroupMembersResp&)>& done) {
   lib::GetGroupMembersResp resp;
   resp.set_result(lib::OK);
 
@@ -192,9 +192,9 @@ void MatchGroupServiceDefault::GetGroupMembers(
   done(resp);
 }
 
-void MatchGroupServiceDefault::GetSettlementList(
+void MatchGroupServiceImpl::GetSettlementList(
     const std::shared_ptr<lib::GetSettlementListReq>& request,
-    std::function<void(const lib::GetSettlementListResp&)> done) {
+    const std::function<void(const lib::GetSettlementListResp&)>& done) {
   lib::GetSettlementListResp resp;
   const std::uint64_t id = request->id();
 
@@ -222,9 +222,9 @@ void MatchGroupServiceDefault::GetSettlementList(
   done(resp);
 }
 
-void MatchGroupServiceDefault::RemoveSettlementList(
+void MatchGroupServiceImpl::RemoveSettlementList(
     const std::shared_ptr<lib::RemoveSettlementListReq>& request,
-    std::function<void(const lib::RemoveSettlementListResp&)> done) {
+    const std::function<void(const lib::RemoveSettlementListResp&)>& done) {
   lib::RemoveSettlementListResp resp;
   const std::uint64_t id = request->id();
 

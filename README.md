@@ -16,7 +16,7 @@ CMatch Library 是一个基于 C++20 的赛季制匹配分组库，采用 CMake 
 - Google Test（gtest）
 - Protobuf
 - clang-format
-- clang-tidy
+- clangd（作为 C/C++ 语言服务器，并承担静态分析）
 
 ## 快速开始
 
@@ -35,47 +35,45 @@ ctest --preset ninja-debug
 
 ```
 src/cmatch/                          # 库源码
+├── CMakeLists.txt                   # 库构建配置
 ├── season_config_interface.h        # 赛季配置接口
 ├── ticket_entity_interface.h        # 凭据实体接口
 ├── ticket_entity_manager_interface.h # 凭据实体管理器接口
 ├── ticket_manager.h / .cpp          # 匹配算法实现
-├── match_group_service_impl.h       # 用户接口服务实现
-├── match_group_service_default.h / .cpp # 默认服务实现
-└── math_utils.h / .cpp              # 工具函数（示例）
+└── match_group_service_impl.h / .cpp # 用户接口服务实现
 
-tests/CMakeLists.txt                     # 测试子目录 CMake 配置
 tests/cmatch/                        # 测试代码
+├── CMakeLists.txt                   # 测试构建配置
 ├── test_protobuf_messages.cpp       # Protobuf 消息测试
 ├── test_core_interfaces.cpp         # 核心接口测试
 ├── test_ticket_manager.cpp          # 匹配算法测试
 ├── test_match_group_service.cpp     # 用户接口服务测试
 ├── test_exception_handling.cpp      # 异常处理测试
 ├── test_cmatch_integration.cpp      # 集成测试
-├── test_math_utils.cpp              # 工具函数测试
 └── mock_ticket_entity_manager.h     # Mock 管理器
 
 proto/cmatch/                        # Protobuf 定义
 ├── config.proto                     # 赛季配置定义
-├── lib.proto                        # 数据结构定义
-└── table.proto                      # 表格数据定义
+├── lib.proto                        # 服务消息定义
+└── table.proto                      # 数据结构定义
 
 docs/specs/cmatch_library/           # 规格文档
-├── README.md                        # 规格总览
-├── config.md                        # 配置规格
-├── data_structures.md               # 数据结构规格
-├── user_interface.md                # 用户接口规格
-├── matching_algorithm.md            # 匹配算法规格
-└── exception_handling.md            # 异常处理规格
-
-docs/specs/cmatch_library/implementation/ # 实施路线
-├── README.md                        # 实施路线总览
-├── todolist.md                      # 进度看板
-└── step-01-protobuf-config-data-structures.md  # 各步骤文档...
+├── design/                          # 设计文档
+│   ├── README.md                    # 规格总览
+│   ├── config.md                    # 配置规格
+│   ├── data_structures.md           # 数据结构规格
+│   ├── user_interface.md            # 用户接口规格
+│   ├── matching_algorithm.md        # 匹配算法规格
+│   └── exception_handling.md        # 异常处理规格
+└── implementation/                  # 实施路线
+    ├── README.md                    # 实施路线总览
+    ├── todolist.md                  # 进度看板
+    └── step-01-protobuf-config-data-structures.md  # 各步骤文档...
 ```
 
 ## 文档索引
 
-- [规格文档](docs/specs/cmatch_library/README.md)
+- [规格文档](docs/specs/cmatch_library/design/README.md)
 - [实施路线](docs/specs/cmatch_library/implementation/README.md)
 
 ## 代码规范
@@ -85,10 +83,13 @@ docs/specs/cmatch_library/implementation/ # 实施路线
   ```bash
   find src tests -name "*.cpp" -o -name "*.h" | xargs clang-format -i
   ```
-- 使用 `clang-tidy` 进行静态分析：
-  ```bash
-  find src/cmatch -name "*.cpp" | xargs clang-tidy -p build/debug
-  ```
+- 使用 `clangd` 进行静态分析：
+  - 确保已执行 `cmake --preset ninja-debug` 生成 `build/debug/compile_commands.json`。
+  - 在编辑器中打开任意 `.cpp` 或 `.h` 文件，`clangd` 会自动加载 [`.clangd`](.clangd) 配置并运行 ClangTidy 检查。
+  - 也可通过命令行手动检查单个文件：
+    ```bash
+    clangd --check=src/cmatch/ticket_manager.cpp
+    ```
 
 ## 贡献指南
 

@@ -6,8 +6,8 @@
 
 ## 原始规格引用
 
-- `README.md`：核心概念与文档结构。
-- `config.md`、`data_structures.md`、`user_interface.md`、`matching_algorithm.md`、`exception_handling.md`：全部规格内容。
+- `docs/specs/cmatch_library/design/README.md`：核心概念与文档结构。
+- `docs/specs/cmatch_library/design/config.md`、`data_structures.md`、`user_interface.md`、`matching_algorithm.md`、`exception_handling.md`：全部规格内容。
 - 项目根 `README.md`：当前为模板说明，需补充业务功能描述。
 
 ## 当前代码库基线
@@ -39,7 +39,7 @@
 
 1. 准备内存配置实现（Mock `SeasonConfigInterface`）。
 2. 准备内存实体管理器（Mock `TicketEntityManagerInterface`）。
-3. 构造 `TicketManager` 与 `MatchGroupServiceDefault`。
+3. 构造 `TicketManager` 与 `MatchGroupServiceImpl`。
 4. 调用 `GetSeasonList` 验证赛季列表。
 5. 调用 `SubmitTicket` 提交多个凭据。
 6. 调用 `RegisterSeason` 为凭据报名赛事。
@@ -75,7 +75,6 @@
 - `src/cmatch/ticket_entity_manager_interface.h`
 - `src/cmatch/ticket_manager.h`
 - `src/cmatch/match_group_service_impl.h`
-- `src/cmatch/match_group_service_default.h`
 
 每个公共类、方法、参数、返回值均需注释。
 
@@ -101,7 +100,7 @@
 - 修改：
   - `README.md`
   - `src/cmatch/*.h`（补充注释）
-  - `tests/CMakeLists.txt`（新增 `test_cmatch_integration` 可执行文件，源文件路径为 `cmatch/test_cmatch_integration.cpp`）
+  - `tests/cmatch/CMakeLists.txt`（新增 `test_cmatch_integration` 可执行文件，源文件路径为 `test_cmatch_integration.cpp`）
   - `docs/specs/cmatch_library/implementation/README.md`
   - `docs/specs/cmatch_library/implementation/todolist.md`
 

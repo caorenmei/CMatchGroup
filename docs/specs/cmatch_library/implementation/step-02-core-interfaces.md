@@ -180,8 +180,8 @@ class TicketEntityManagerInterface {
   - `tests/cmatch/mock_ticket_entity_manager.h`
   - `tests/cmatch/test_core_interfaces.cpp`
 - 修改：
-  - `src/CMakeLists.txt`（若接口需要源文件实现；若全为头文件，可能无需修改）
-  - `tests/CMakeLists.txt`（新增 `test_core_interfaces` 可执行文件，源文件路径为 `cmatch/test_core_interfaces.cpp`）
+  - `src/cmatch/CMakeLists.txt`（若接口需要源文件实现；若全为头文件，可能无需修改）
+  - `tests/cmatch/CMakeLists.txt`（新增 `test_core_interfaces` 可执行文件，源文件路径为 `test_core_interfaces.cpp`）
 
 ## 风险与注意事项
 

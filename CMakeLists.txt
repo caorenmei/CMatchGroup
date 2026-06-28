@@ -21,8 +21,8 @@ find_package(Protobuf REQUIRED)
 
 # 子目录
 add_subdirectory(proto)
-add_subdirectory(src)
+add_subdirectory(src/cmatch)
 
 # 启用 CTest 测试
 enable_testing()
-add_subdirectory(tests)
+add_subdirectory(tests/cmatch)

@@ -40,10 +40,11 @@
 #define CMATCH_SRC_CMATCH_TICKET_MANAGER_H_
 
 #include <cstdint>
-#include <memory>
 #include <random>
+#include <unordered_map>
+#include <vector>
 
-#include "cmatch/season_config_interface.h"
+#include "cmatch/config.pb.h"
 #include "cmatch/ticket_entity_manager_interface.h"
 
 namespace cmatch {
@@ -52,7 +53,6 @@ namespace cmatch {
 class TicketManager {
  public:
   explicit TicketManager(TicketEntityManagerInterface& entity_manager);
-  ~TicketManager();
 
   // 实体加载完成后，遍历每个赛事类型调用一次
   void BuildSeason(const config::SeasonInfo& season_info,
@@ -71,8 +71,61 @@ class TicketManager {
                  std::mt19937& rng);
 
  private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
+  struct GroupIdAllocator {
+    std::uint32_t next_sequence_ = 1;
+
+    void Initialize(
+        const std::unordered_map<std::uint64_t, TicketEntityPtr>& entities) {
+      std::uint32_t max_sequence = 0;
+      for (const auto& [id, entity] : entities) {
+        (void)id;
+        const auto& ticket = entity->GetData();
+        for (const auto& [type, group] : ticket.seasons()) {
+          (void)type;
+          max_sequence = std::max(
+              max_sequence, static_cast<std::uint32_t>(group.group_id()));
+        }
+        for (const auto& [type, settlement] : ticket.settlements()) {
+          (void)type;
+          max_sequence = std::max(
+              max_sequence, static_cast<std::uint32_t>(settlement.group_id()));
+        }
+      }
+      next_sequence_ = max_sequence + 1;
+    }
+
+    std::uint64_t Allocate(std::uint32_t zone_id) {
+      std::uint64_t group_id =
+          (static_cast<std::uint64_t>(zone_id) << 32) | next_sequence_;
+      ++next_sequence_;
+      return group_id;
+    }
+  };
+
+  struct GroupSlot {
+    std::uint64_t group_id = 0;
+    std::uint32_t grade = 0;
+    std::vector<TicketEntityPtr> entities;
+  };
+
+  static std::uint32_t ComputeNextGrade(const config::GradeInfo& grade_info,
+                                        std::uint32_t rank,
+                                        float rank_percent);
+  void SettleGroup(const std::vector<TicketEntityPtr>& group,
+                   std::uint32_t season_type,
+                   const config::SeasonTime& season_time, std::uint32_t grade,
+                   std::uint32_t score_attr_id);
+  void FormGroupSlots(std::vector<TicketEntityPtr> tickets,
+                      std::uint32_t group_size, std::uint32_t grade,
+                      std::mt19937& rng, std::vector<GroupSlot>& slots);
+  void AddToGroupSlots(const TicketEntityPtr& entity, std::uint32_t group_size,
+                       std::uint32_t grade, std::vector<GroupSlot>& slots);
+  void WriteSeasonGroups(std::vector<GroupSlot>& slots,
+                         std::uint32_t season_type,
+                         const config::SeasonTime& season_time);
+
+  TicketEntityManagerInterface& entity_manager_;
+  GroupIdAllocator group_id_allocator_;
 };
 
 }  // namespace cmatch
@@ -96,7 +149,7 @@ bool IsInSeason(std::uint32_t now_time, const config::SeasonTime& season_time);
 实现 `GroupIdAllocator`：
 
 - 维护下一个自增编号 `next_sequence_`（`std::uint32_t`）。
-- 提供 `void InitializeFromEntities(const std::unordered_map<...TicketEntityPtr>& entities)`：遍历所有凭据的 `SeasonGroup` 与 `SeasonSettlement` 中的 `group_id`，提取低 32 位，取最大值加 1 作为 `next_sequence_`。
+- 提供 `void Initialize(const std::unordered_map<...TicketEntityPtr>& entities)`：遍历所有凭据的 `SeasonGroup` 与 `SeasonSettlement` 中的 `group_id`，提取低 32 位，取最大值加 1 作为 `next_sequence_`。
 - 提供 `std::uint64_t Allocate(std::uint32_t zone_id)`：返回 `(static_cast<std::uint64_t>(zone_id) << 32) | next_sequence_`，然后 `++next_sequence_`。
 
 ### R3.4 赛季结算
@@ -175,8 +228,8 @@ bool IsInSeason(std::uint32_t now_time, const config::SeasonTime& season_time);
   - `src/cmatch/ticket_manager.cpp`
   - `tests/cmatch/test_ticket_manager.cpp`
 - 修改：
-  - `src/CMakeLists.txt`（将 `ticket_manager.cpp` 加入库源文件列表）
-  - `tests/CMakeLists.txt`（新增 `test_ticket_manager` 可执行文件，源文件路径为 `cmatch/test_ticket_manager.cpp`）
+  - `src/cmatch/CMakeLists.txt`（将 `ticket_manager.cpp` 加入库源文件列表）
+  - `tests/cmatch/CMakeLists.txt`（新增 `test_ticket_manager` 可执行文件，源文件路径为 `test_ticket_manager.cpp`）
 
 ## 风险与注意事项
 

@@ -13,7 +13,7 @@
 
 #include "cmatch/config.pb.h"
 #include "cmatch/lib.pb.h"
-#include "cmatch/match_group_service_default.h"
+#include "cmatch/match_group_service_impl.h"
 #include "cmatch/season_config_interface.h"
 #include "cmatch/ticket_manager.h"
 #include "mock_ticket_entity_manager.h"
@@ -116,25 +116,20 @@ config::SeasonTime MakeSeasonTime(std::uint64_t begin, std::uint64_t end) {
   return time;
 }
 
-void SetScore(const TicketEntityPtr& entity, std::uint32_t attr_id,
-              std::uint64_t score) {
-  (*entity->GetData().mutable_attributes())[attr_id] = score;
-}
-
 class CMatchIntegrationTest : public ::testing::Test {
  protected:
   void SetUp() override {
     config_ = std::make_unique<MockSeasonConfig>();
     manager_ = std::make_unique<testing::MockTicketEntityManager>();
     ticket_manager_ = std::make_unique<TicketManager>(*manager_);
-    service_ = std::make_unique<MatchGroupServiceDefault>(*config_, *manager_,
-                                                          *ticket_manager_);
+    service_ = std::make_unique<MatchGroupServiceImpl>(*config_, *manager_,
+                                                       *ticket_manager_);
   }
 
   std::unique_ptr<MockSeasonConfig> config_;
   std::unique_ptr<testing::MockTicketEntityManager> manager_;
   std::unique_ptr<TicketManager> ticket_manager_;
-  std::unique_ptr<MatchGroupServiceDefault> service_;
+  std::unique_ptr<MatchGroupServiceImpl> service_;
 };
 
 // R6.1 端到端集成测试：完整业务流程

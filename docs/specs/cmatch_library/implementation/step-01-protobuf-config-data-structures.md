@@ -22,7 +22,7 @@
 - 项目已使用 CMake + Ninja，C++20。
 - 尚无 Protobuf 依赖与 `.proto` 文件。
 - `src/cmatch/` 目录已存在，用于存放库头文件与实现。
-- 根 `CMakeLists.txt` 与 `src/CMakeLists.txt` 已配置为构建 `cmatch` 静态库。
+- 根 `CMakeLists.txt` 与 `src/cmatch/CMakeLists.txt` 已配置为构建 `cmatch` 静态库。
 
 ## 开始前的校准清单
 
@@ -113,7 +113,7 @@ message SeasonSettlement {
 - 使用 `protobuf_generate_cpp` 或 `protobuf_generate` 生成代码。
 - 将生成的 `.pb.cc` 加入 `cmatch` 库目标，并链接 `protobuf::libprotobuf`。
 - 将 `proto/` 目录通过 `target_include_directories` 暴露给库使用者（生成代码中的 include 路径通常需要 `${CMAKE_CURRENT_BINARY_DIR}`）。
-- 调整 `tests/CMakeLists.txt`，使测试目录结构与 `src/` 保持一致。示例：
+- 调整 `tests/cmatch/CMakeLists.txt`，使测试目录结构与 `src/cmatch/` 保持一致。示例：
 
 ```cmake
 # 测试目录构建配置
@@ -124,7 +124,7 @@ include(GoogleTest)
 # Protobuf 消息测试
 add_executable(
   test_protobuf_messages
-  cmatch/test_protobuf_messages.cpp
+  test_protobuf_messages.cpp
 )
 
 target_link_libraries(
@@ -137,7 +137,7 @@ target_link_libraries(
 gtest_discover_tests(test_protobuf_messages)
 ```
 
-后续步骤新增的测试可执行文件均按 `tests/cmatch/<name>.cpp` 组织。
+后续步骤新增的测试可执行文件均按 `tests/cmatch/<name>.cpp` 组织，在 `tests/cmatch/CMakeLists.txt` 中注册。
 
 ### R1.3 测试验证
 
@@ -164,8 +164,8 @@ gtest_discover_tests(test_protobuf_messages)
   - `tests/cmatch/test_protobuf_messages.cpp`
 - 修改：
   - `CMakeLists.txt`
-  - `src/CMakeLists.txt`
-  - `tests/CMakeLists.txt`
+  - `src/cmatch/CMakeLists.txt`
+  - `tests/cmatch/CMakeLists.txt`
 
 ## 风险与注意事项
 

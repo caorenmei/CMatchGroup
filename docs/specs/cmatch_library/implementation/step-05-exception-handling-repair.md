@@ -98,7 +98,7 @@
 
 - 修改：
   - `src/cmatch/ticket_manager.cpp`（核心修复逻辑）
-  - `tests/CMakeLists.txt`（新增 `test_exception_handling` 可执行文件，源文件路径为 `cmatch/test_exception_handling.cpp`）
+  - `tests/cmatch/CMakeLists.txt`（新增 `test_exception_handling` 可执行文件，源文件路径为 `test_exception_handling.cpp`）
 - 新增：
   - `tests/cmatch/test_exception_handling.cpp`
 

@@ -1,7 +1,7 @@
 # CMatch Library 实施路线
 
-> **范围：** 本文档为 `docs/specs/cmatch_library/` 规格说明创建可执行的实施路线。
-> **约束：** 原始规格文档（README.md、config.md、data_structures.md、user_interface.md、matching_algorithm.md、exception_handling.md）保持只读，不做任何修改。
+> **范围：** 本文档为 `docs/specs/cmatch_library/design/` 设计文档创建可执行的实施路线。
+> **约束：** 设计文档（`design/README.md`、`config.md`、`data_structures.md`、`user_interface.md`、`matching_algorithm.md`、`exception_handling.md`）在重构期间与代码保持一致，如有变更需同步更新。
 > **目标：** 将规格拆分为 6 个递进的大步骤，每个步骤拥有独立的需求文档与验收条件；整体进度由 `todolist.md` 管理。
 
 ## 代码库基线
@@ -10,14 +10,14 @@
 - 编译器：g++，C++20。
 - 测试：Google Test（gtest）+ CTest。
 - 代码规范：Google C++ Style Guide，`clang-format`、`clang-tidy`。
-- 当前状态：项目仅包含示例代码 `src/cmatch/math_utils.*` 与对应测试；尚无 Protobuf、业务接口与算法实现。
+- 当前状态：CMatch Library 全部 6 个步骤已完成，代码、测试与文档均已对齐。本次重构后：设计文档位于 `docs/specs/cmatch_library/design/`，库构建配置位于 `src/cmatch/CMakeLists.txt`，测试构建配置位于 `tests/cmatch/CMakeLists.txt`；`TicketManager` 不再使用 Pimpl，`MatchGroupServiceImpl` 为具体实现类，已移除 `math_utils` 示例模块。
 
 ## 目录结构约定
 
-- 源码目录：`src/cmatch/`，与库命名空间一致。
-- 测试目录：`tests/cmatch/`，与 `src/cmatch/` 保持一致的子目录结构。
+- 源码目录：`src/cmatch/`，与库命名空间一致；库构建配置位于 `src/cmatch/CMakeLists.txt`。
+- 测试目录：`tests/cmatch/`，与 `src/cmatch/` 保持一致的子目录结构；测试构建配置位于 `tests/cmatch/CMakeLists.txt`。
 - 所有新增测试文件、Mock 头文件均应放在 `tests/cmatch/` 下，而非 `tests/` 根目录。
-- `tests/CMakeLists.txt` 按测试可执行文件逐个注册，源文件路径使用 `cmatch/<name>.cpp`。
+- `tests/cmatch/CMakeLists.txt` 按测试可执行文件逐个注册，源文件路径直接使用文件名。
 
 | 步骤 | 主题 | 核心交付物 | 依赖 |
 |---|---|---|---|

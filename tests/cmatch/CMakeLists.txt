@@ -1,28 +1,12 @@
-# 测试目录构建配置
+# tests/cmatch 目录构建配置
 
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-# 示例测试可执行文件
-add_executable(
-  test_math_utils
-  cmatch/test_math_utils.cpp
-)
-
-target_link_libraries(
-  test_math_utils
-  PRIVATE
-  cmatch
-  GTest::gtest_main
-)
-
-# 自动发现测试并注册到 CTest
-gtest_discover_tests(test_math_utils)
-
 # Protobuf 消息测试
 add_executable(
   test_protobuf_messages
-  cmatch/test_protobuf_messages.cpp
+  test_protobuf_messages.cpp
 )
 
 target_link_libraries(
@@ -37,7 +21,7 @@ gtest_discover_tests(test_protobuf_messages)
 # 核心接口测试
 add_executable(
   test_core_interfaces
-  cmatch/test_core_interfaces.cpp
+  test_core_interfaces.cpp
 )
 
 target_link_libraries(
@@ -52,7 +36,7 @@ gtest_discover_tests(test_core_interfaces)
 # TicketManager 算法测试
 add_executable(
   test_ticket_manager
-  cmatch/test_ticket_manager.cpp
+  test_ticket_manager.cpp
 )
 
 target_link_libraries(
@@ -67,7 +51,7 @@ gtest_discover_tests(test_ticket_manager)
 # 匹配分组服务测试
 add_executable(
   test_match_group_service
-  cmatch/test_match_group_service.cpp
+  test_match_group_service.cpp
 )
 
 target_link_libraries(
@@ -82,7 +66,7 @@ gtest_discover_tests(test_match_group_service)
 # 异常处理与数据修复测试
 add_executable(
   test_exception_handling
-  cmatch/test_exception_handling.cpp
+  test_exception_handling.cpp
 )
 
 target_link_libraries(
@@ -97,7 +81,7 @@ gtest_discover_tests(test_exception_handling)
 # 端到端与边界场景集成测试
 add_executable(
   test_cmatch_integration
-  cmatch/test_cmatch_integration.cpp
+  test_cmatch_integration.cpp
 )
 
 target_link_libraries(

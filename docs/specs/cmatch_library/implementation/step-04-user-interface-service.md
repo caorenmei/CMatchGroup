@@ -23,7 +23,7 @@
 1. **服务 `.proto` 文件位置**：`user_interface.md` 中的 `MatchGroupService` 请求/响应消息应放在 `proto/cmatch/lib.proto` 中，包名为 `cmatch.lib`。是否同时生成 gRPC 服务骨架？规格说明“只生成 Message 的定义，服务的实现由用户自己完成”，因此 `.proto` 中可只定义 `service` 与消息，但不依赖 gRPC 编译。
 2. **回调风格**：规格中使用 `std::function<void(const Resp&)> done` 作为异步回调。确认是否保持该风格，还是简化为同步返回值。当前建议保持规格风格，便于接入各类 RPC 框架。
 3. **`Results` 枚举的默认值**：`OK = 0` 是 Protobuf 枚举的默认返回值，需确保未显式设置时不会误报成功。
-4. **`MatchGroupServiceImpl` 是否持有 `TicketManager`**：规格中 `TicketManager` 独立存在，服务实现可能通过引用或指针使用它。当前建议 `MatchGroupServiceImpl` 作为纯虚基类，具体实现类（如 `MatchGroupServiceDefault`）持有 `TicketManager` 与 `SeasonConfigInterface`。
+4. **`MatchGroupServiceImpl` 是否持有 `TicketManager`**：`MatchGroupServiceImpl` 作为具体实现类，直接持有 `SeasonConfigInterface`、`TicketEntityManagerInterface` 与 `TicketManager` 的引用，不需要额外的默认实现头文件。
 5. **错误处理细化**：规格仅定义了 `OK` 与 `SYSTEM_BUSY`，但服务实现中会出现凭据不存在、赛事不存在、分组不存在等典型错误。实施时应在 `proto/cmatch/lib.proto` 的 `Results` 枚举中增加更丰富的错误码（如 `TICKET_NOT_FOUND`、`SEASON_NOT_FOUND` 等），以便调用方精确处理。原始规格文档保持只读，扩展通过实施文档落地。
 
 ## 需求
@@ -167,9 +167,9 @@ service MatchGroupService {
 }
 ```
 
-### R4.2 定义服务接口
+### R4.2 定义并实现服务类
 
-在 `src/cmatch/match_group_service_impl.h` 中定义纯虚接口：
+在 `src/cmatch/match_group_service_impl.h` 中定义具体服务类：
 
 ```cpp
 #ifndef CMATCH_SRC_CMATCH_MATCH_GROUP_SERVICE_IMPL_H_
@@ -179,44 +179,53 @@ service MatchGroupService {
 #include <memory>
 
 #include "cmatch/lib.pb.h"
+#include "cmatch/season_config_interface.h"
+#include "cmatch/ticket_entity_manager_interface.h"
+#include "cmatch/ticket_manager.h"
 
 namespace cmatch {
 
 class MatchGroupServiceImpl {
  public:
-  virtual ~MatchGroupServiceImpl() = default;
+  MatchGroupServiceImpl(SeasonConfigInterface& config,
+                        TicketEntityManagerInterface& entity_manager,
+                        TicketManager& ticket_manager);
 
-  virtual void GetSeasonList(
+  void GetSeasonList(
       const std::shared_ptr<lib::GetSeasonListReq>& request,
-      std::function<void(const lib::GetSeasonListResp&)> done) = 0;
+      const std::function<void(const lib::GetSeasonListResp&)>& done);
 
-  virtual void SubmitTicket(
+  void SubmitTicket(
       const std::shared_ptr<lib::SubmitTicketReq>& request,
-      std::function<void(const lib::SubmitTicketResp&)> done) = 0;
+      const std::function<void(const lib::SubmitTicketResp&)>& done);
 
-  virtual void GetTicket(
-      const std::shared_ptr<lib::GetTicketReq>& request,
-      std::function<void(const lib::GetTicketResp&)> done) = 0;
+  void GetTicket(const std::shared_ptr<lib::GetTicketReq>& request,
+                 const std::function<void(const lib::GetTicketResp&)>& done);
 
-  virtual void RegisterSeason(
+  void RegisterSeason(
       const std::shared_ptr<lib::RegisterSeasonReq>& request,
-      std::function<void(const lib::RegisterSeasonResp&)> done) = 0;
+      const std::function<void(const lib::RegisterSeasonResp&)>& done);
 
-  virtual void GetTicketList(
+  void GetTicketList(
       const std::shared_ptr<lib::GetTicketListReq>& request,
-      std::function<void(const lib::GetTicketListResp&)> done) = 0;
+      const std::function<void(const lib::GetTicketListResp&)>& done);
 
-  virtual void GetGroupMembers(
+  void GetGroupMembers(
       const std::shared_ptr<lib::GetGroupMembersReq>& request,
-      std::function<void(const lib::GetGroupMembersResp&)> done) = 0;
+      const std::function<void(const lib::GetGroupMembersResp&)>& done);
 
-  virtual void GetSettlementList(
+  void GetSettlementList(
       const std::shared_ptr<lib::GetSettlementListReq>& request,
-      std::function<void(const lib::GetSettlementListResp&)> done) = 0;
+      const std::function<void(const lib::GetSettlementListResp&)>& done);
 
-  virtual void RemoveSettlementList(
+  void RemoveSettlementList(
       const std::shared_ptr<lib::RemoveSettlementListReq>& request,
-      std::function<void(const lib::RemoveSettlementListResp&)> done) = 0;
+      const std::function<void(const lib::RemoveSettlementListResp&)>& done);
+
+ private:
+  SeasonConfigInterface& config_;
+  TicketEntityManagerInterface& entity_manager_;
+  TicketManager& ticket_manager_;
 };
 
 }  // namespace cmatch
@@ -224,21 +233,7 @@ class MatchGroupServiceImpl {
 #endif  // CMATCH_SRC_CMATCH_MATCH_GROUP_SERVICE_IMPL_H_
 ```
 
-### R4.3 实现默认服务类
-
-在 `src/cmatch/match_group_service_default.h` 与 `.cpp` 中实现具体服务类：
-
-```cpp
-class MatchGroupServiceDefault : public MatchGroupServiceImpl {
- public:
-  MatchGroupServiceDefault(SeasonConfigInterface& config,
-                           TicketEntityManagerInterface& entity_manager,
-                           TicketManager& ticket_manager);
-  // ... 实现 8 个 RPC 方法
-};
-```
-
-各方法行为：
+在 `src/cmatch/match_group_service_impl.cpp` 中实现全部 8 个 RPC 方法：
 
 - **GetSeasonList**：遍历 `SeasonConfigInterface::GetTypes()`，对每个类型调用 `GetTime`，填充 `Season` 列表。无配置时返回空列表与 `OK`。
 - **SubmitTicket**：校验请求中的 `ticket.id` 与 `zone_id` 有效性；通过 `entity_manager.GetOrCreateEntity(id, zone_id)` 获取/创建实体，更新 `attributes`、`registrations`，调用 `SetDirty`。参数无效时返回 `INVALID_PARAMETER`。
@@ -249,7 +244,7 @@ class MatchGroupServiceDefault : public MatchGroupServiceImpl {
 - **GetSettlementList**：获取实体，不存在返回 `TICKET_NOT_FOUND`；返回指定凭据的所有 `settlements`。
 - **RemoveSettlementList**：获取实体，不存在返回 `TICKET_NOT_FOUND`；从凭据的 `settlements` map 中删除指定 `settlement_id`（key）。不存在的 key 可忽略。调用 `SetDirty`。返回 `OK`。
 
-### R4.4 测试
+### R4.3 测试
 
 创建 `tests/cmatch/test_match_group_service.cpp`，覆盖：
 
@@ -279,12 +274,11 @@ class MatchGroupServiceDefault : public MatchGroupServiceImpl {
 - 新增：
   - `proto/cmatch/lib.proto`
   - `src/cmatch/match_group_service_impl.h`
-  - `src/cmatch/match_group_service_default.h`
-  - `src/cmatch/match_group_service_default.cpp`
+  - `src/cmatch/match_group_service_impl.cpp`
   - `tests/cmatch/test_match_group_service.cpp`
 - 修改：
-  - `src/CMakeLists.txt`（加入 `match_group_service_default.cpp`）
-  - `tests/CMakeLists.txt`（新增 `test_match_group_service` 可执行文件，源文件路径为 `cmatch/test_match_group_service.cpp`）
+  - `src/cmatch/CMakeLists.txt`（加入 `match_group_service_impl.cpp`）
+  - `tests/cmatch/CMakeLists.txt`（新增 `test_match_group_service` 可执行文件，源文件路径为 `test_match_group_service.cpp`）
 
 ## 风险与注意事项
 

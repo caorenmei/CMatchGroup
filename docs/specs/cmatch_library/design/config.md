@@ -70,13 +70,13 @@ public:
     virtual ~SeasonConfigInterface() = default;
 
     // 获取所有赛季类型
-    std::vector<std::uint32_t> GetTypes() const = 0;
+    virtual std::vector<std::uint32_t> GetTypes() const = 0;
   
     // 获取赛季信息，返回是否找到该类型
-    bool GetInfo(std::uint32_t type, SeasonInfo& info) const = 0;
+    virtual bool GetInfo(std::uint32_t type, SeasonInfo& info) const = 0;
 
     // 获取赛季时间，返回是否找到该类型
-    bool GetTime(std::uint32_t type, SeasonTime& time) const = 0;
+    virtual bool GetTime(std::uint32_t type, SeasonTime& time) const = 0;
 };
 ```
 

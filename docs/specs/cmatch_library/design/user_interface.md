@@ -234,30 +234,47 @@ message RemoveSettlementListResp
 ## 服务实现
 
 ```c++
-// 匹配分组服务接口
+// 匹配分组服务实现
 class MatchGroupServiceImpl
 {
 public:
-    virtual ~MatchGroupServiceImpl() = default;
+    MatchGroupServiceImpl(SeasonConfigInterface& config,
+                          TicketEntityManagerInterface& entity_manager,
+                          TicketManager& ticket_manager);
 
     // 获取赛事列表
-    void GetSeasonList(const std::shared_ptr<GetSeasonListReq>& request, std::function<void(const GetSeasonListResp&)> done) = 0;
+    void GetSeasonList(const std::shared_ptr<GetSeasonListReq>& request,
+                       const std::function<void(const GetSeasonListResp&)>& done);
     // 更新凭据
-    void SubmitTicket(const std::shared_ptr<SubmitTicketReq>& request, std::function<void(const SubmitTicketResp&)> done) = 0;
+    void SubmitTicket(const std::shared_ptr<SubmitTicketReq>& request,
+                      const std::function<void(const SubmitTicketResp&)>& done);
     // 获取凭据
-    void GetTicket(const std::shared_ptr<GetTicketReq>& request, std::function<void(const GetTicketResp&)> done) = 0;
+    void GetTicket(const std::shared_ptr<GetTicketReq>& request,
+                   const std::function<void(const GetTicketResp&)>& done);
     // 报名赛事
-    void RegisterSeason(const std::shared_ptr<RegisterSeasonReq>& request, std::function<void(const RegisterSeasonResp&)> done) = 0;
+    void RegisterSeason(const std::shared_ptr<RegisterSeasonReq>& request,
+                        const std::function<void(const RegisterSeasonResp&)>& done);
     // 获取凭据列表
-    void GetTicketList(const std::shared_ptr<GetTicketListReq>& request, std::function<void(const GetTicketListResp&)> done) = 0;
+    void GetTicketList(const std::shared_ptr<GetTicketListReq>& request,
+                       const std::function<void(const GetTicketListResp&)>& done);
     // 获取分组成员列表
-    void GetGroupMembers(const std::shared_ptr<GetGroupMembersReq>& request, std::function<void(const GetGroupMembersResp&)> done) = 0;
+    void GetGroupMembers(const std::shared_ptr<GetGroupMembersReq>& request,
+                         const std::function<void(const GetGroupMembersResp&)>& done);
     // 获取结算列表
-    void GetSettlementList(const std::shared_ptr<GetSettlementListReq>& request, std::function<void(const GetSettlementListResp&)> done) = 0;
+    void GetSettlementList(const std::shared_ptr<GetSettlementListReq>& request,
+                           const std::function<void(const GetSettlementListResp&)>& done);
     // 删除结算列表
-    void RemoveSettlementList(const std::shared_ptr<RemoveSettlementListReq>& request, std::function<void(const RemoveSettlementListResp&)> done) = 0;
-}
+    void RemoveSettlementList(const std::shared_ptr<RemoveSettlementListReq>& request,
+                              const std::function<void(const RemoveSettlementListResp&)>& done);
+
+private:
+    SeasonConfigInterface& config_;
+    TicketEntityManagerInterface& entity_manager_;
+    TicketManager& ticket_manager_;
+};
 ```
+
+`MatchGroupServiceImpl` 负责请求/响应转换与实体管理调用，匹配算法由 `TicketManager` 负责。
 
 ### 实体和实体管理器
 
@@ -303,22 +320,24 @@ class TicketManager
 {
 public:
     explicit TicketManager(TicketEntityManagerInterface& entity_manager);
-    ~TicketManager();
 
     // 当 TicketEntityManagerInterface 加载完成时调用。由外部根据 SeasonConfigInterface::GetTypes() 遍历每个赛事类型调用一次。
-    void BuildSeason(const config::SeasonInfo& season_info, 
-        const config::SeasonTime& season_time, 
-        std::uint32_t now_time);
-    // 切换赛季
-    void NextSeason(const config::SeasonInfo& season_info, 
-        const config::SeasonTime& season_time, 
-        std::uint32_t now_time);
-    // 新加入的凭据，需要在赛季中进行分组。由外部根据 SeasonConfigInterface::GetTypes() 遍历每个赛事类型调用一次。
-    void AddTicket(const config::SeasonInfo& season_info, 
-        const config::SeasonTime& season_time, 
+    void BuildSeason(const config::SeasonInfo& season_info,
+        const config::SeasonTime& season_time,
         std::uint32_t now_time,
-        std::uint64_t ticket_id);
-}
+        std::mt19937& rng);
+    // 切换赛季
+    void NextSeason(const config::SeasonInfo& season_info,
+        const config::SeasonTime& season_time,
+        std::uint32_t now_time,
+        std::mt19937& rng);
+    // 新加入的凭据，需要在赛季中进行分组。由外部根据 SeasonConfigInterface::GetTypes() 遍历每个赛事类型调用一次。
+    void AddTicket(const config::SeasonInfo& season_info,
+        const config::SeasonTime& season_time,
+        std::uint32_t now_time,
+        std::uint64_t ticket_id,
+        std::mt19937& rng);
+};
 ```
 
 ## 相关文档
