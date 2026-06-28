@@ -63,3 +63,18 @@ target_link_libraries(
 )
 
 gtest_discover_tests(test_ticket_manager)
+
+# 匹配分组服务测试
+add_executable(
+  test_match_group_service
+  cmatch/test_match_group_service.cpp
+)
+
+target_link_libraries(
+  test_match_group_service
+  PRIVATE
+  cmatch
+  GTest::gtest_main
+)
+
+gtest_discover_tests(test_match_group_service)

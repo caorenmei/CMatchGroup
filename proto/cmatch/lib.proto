@@ -1,0 +1,175 @@
+syntax = "proto3";
+
+package cmatch.lib;
+
+// 返回结果码
+enum Results {
+  // 成功
+  OK = 0;
+  // 服务繁忙
+  SYSTEM_BUSY = 1;
+  // 凭据不存在
+  TICKET_NOT_FOUND = 2;
+  // 赛事不存在
+  SEASON_NOT_FOUND = 3;
+  // 分组不存在
+  GROUP_NOT_FOUND = 4;
+  // 结算不存在
+  SETTLEMENT_NOT_FOUND = 5;
+  // 请求参数无效
+  INVALID_PARAMETER = 6;
+  // 已报名该赛事
+  ALREADY_REGISTERED = 7;
+  // 内部错误
+  INTERNAL_ERROR = 8;
+}
+
+// 赛事
+message Season {
+  // 赛事类型
+  uint32 type = 1;
+  // 赛季开始时间
+  uint64 begin_time = 2;
+  // 赛季结束时间
+  uint64 end_time = 3;
+}
+
+// 凭据
+message Ticket {
+  // 凭据 ID
+  uint64 id = 1;
+  // 区域 ID
+  uint32 zone_id = 2;
+  // 属性列表
+  map<uint32, uint64> attributes = 3;
+}
+
+// 赛季分组
+message SeasonGroup {
+  // 赛事类型
+  uint32 type = 1;
+  // 赛季开始时间
+  uint64 begin_time = 2;
+  // 赛季结束时间
+  uint64 end_time = 3;
+  // 段位编号
+  uint32 grade = 4;
+  // 分组编号
+  uint64 group_id = 5;
+}
+
+// 结算信息
+message SeasonSettlement {
+  // 赛事类型
+  uint32 type = 1;
+  // 赛季开始时间
+  uint64 begin_time = 2;
+  // 赛季结束时间
+  uint64 end_time = 3;
+  // 段位编号
+  uint32 grade = 4;
+  // 分组编号
+  uint64 group_id = 5;
+  // 结算排名
+  uint32 rank = 6;
+  // 结算排名百分比
+  float rank_percent = 7;
+  // 结算积分
+  uint64 score = 8;
+}
+
+message GetSeasonListReq {}
+
+message GetSeasonListResp {
+  Results result = 1;
+  repeated Season seasons = 2;
+}
+
+message SubmitTicketReq {
+  Ticket ticket = 1;
+  repeated uint32 registrations = 2;
+}
+
+message SubmitTicketResp {
+  Results result = 1;
+}
+
+message GetTicketReq {
+  // 凭据 ID
+  uint64 id = 1;
+}
+
+message GetTicketResp {
+  Results result = 1;
+  Ticket ticket = 2;
+  repeated uint32 registrations = 3;
+  map<uint32, SeasonGroup> seasons = 4;
+}
+
+message RegisterSeasonReq {
+  // 凭据 ID
+  uint64 id = 1;
+  // 赛事类型列表
+  repeated uint32 types = 2;
+}
+
+message RegisterSeasonResp {
+  Results result = 1;
+}
+
+message GetTicketListReq {
+  // 凭据 ID 列表
+  repeated uint64 ids = 1;
+}
+
+message GetTicketListResp {
+  Results result = 1;
+  repeated Ticket tickets = 2;
+}
+
+message GetGroupMembersReq {
+  // 赛事类型
+  uint32 type = 1;
+  // 分组编号
+  uint64 group_id = 2;
+}
+
+message GetGroupMembersResp {
+  Results result = 1;
+  // key 为凭据 ID，value 为区域 ID
+  map<uint64, uint32> members = 2;
+}
+
+message GetSettlementListReq {
+  // 凭据 ID
+  uint64 id = 1;
+}
+
+message GetSettlementListResp {
+  Results result = 1;
+  repeated SeasonSettlement settlements = 2;
+}
+
+message RemoveSettlementListReq {
+  // 凭据 ID
+  uint64 id = 1;
+  // 结算 ID 列表，实际对应赛季类型
+  repeated uint64 settlement_ids = 2;
+}
+
+message RemoveSettlementListResp {
+  Results result = 1;
+}
+
+// 匹配分组服务
+service MatchGroupService {
+  rpc GetSeasonList(GetSeasonListReq) returns (GetSeasonListResp);
+  rpc SubmitTicket(SubmitTicketReq) returns (SubmitTicketResp);
+  rpc GetTicket(GetTicketReq) returns (GetTicketResp);
+  rpc RegisterSeason(RegisterSeasonReq) returns (RegisterSeasonResp);
+  rpc GetTicketList(GetTicketListReq) returns (GetTicketListResp);
+  rpc GetGroupMembers(GetGroupMembersReq) returns (GetGroupMembersResp);
+  rpc GetSettlementList(GetSettlementListReq) returns (GetSettlementListResp);
+  rpc RemoveSettlementList(RemoveSettlementListReq)
+      returns (RemoveSettlementListResp);
+}

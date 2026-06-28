@@ -3,6 +3,7 @@
 add_library(
   cmatch
   cmatch/math_utils.cpp
+  cmatch/match_group_service_default.cpp
   cmatch/ticket_manager.cpp
 )
 

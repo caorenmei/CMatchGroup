@@ -45,23 +45,23 @@
 - [x] 3.9 应用 `clang-format` 与 `clang-tidy`。
 - [ ] 3.10 提交变更，更新本文件状态。
 
-## [ ] 步骤 4：用户接口服务实现
+## [x] 步骤 4：用户接口服务实现
 
 ### 步骤内部进度
 
-- [ ] 4.1 梳理 `user_interface.md` 中 `MatchGroupServiceImpl` 的所有 RPC 方法。
-- [ ] 4.2 根据当前代码库状态（已存在 `TicketManager` 与实体管理接口）微调需求与验收条件。
-- [ ] 4.3 定义 `MatchGroupServiceImpl` 纯虚接口。
-- [ ] 4.4 实现 `GetSeasonList`。
-- [ ] 4.5 实现 `SubmitTicket`。
-- [ ] 4.6 实现 `GetTicket`。
-- [ ] 4.7 实现 `RegisterSeason`。
-- [ ] 4.8 实现 `GetTicketList`。
-- [ ] 4.9 实现 `GetGroupMembers`。
-- [ ] 4.10 实现 `GetSettlementList`。
-- [ ] 4.11 实现 `RemoveSettlementList`。
-- [ ] 4.12 编写各 RPC 方法的单元测试。
-- [ ] 4.13 应用 `clang-format` 与 `clang-tidy`。
+- [x] 4.1 梳理 `user_interface.md` 中 `MatchGroupServiceImpl` 的所有 RPC 方法。
+- [x] 4.2 根据当前代码库状态（已存在 `TicketManager` 与实体管理接口）微调需求与验收条件。
+- [x] 4.3 定义 `MatchGroupServiceImpl` 纯虚接口。
+- [x] 4.4 实现 `GetSeasonList`。
+- [x] 4.5 实现 `SubmitTicket`。
+- [x] 4.6 实现 `GetTicket`。
+- [x] 4.7 实现 `RegisterSeason`。
+- [x] 4.8 实现 `GetTicketList`。
+- [x] 4.9 实现 `GetGroupMembers`。
+- [x] 4.10 实现 `GetSettlementList`。
+- [x] 4.11 实现 `RemoveSettlementList`。
+- [x] 4.12 编写各 RPC 方法的单元测试。
+- [x] 4.13 应用 `clang-format` 与 `clang-tidy`。
 - [ ] 4.14 提交变更，更新本文件状态。
 
 ## [ ] 步骤 5：异常处理与数据修复

@@ -22,5 +22,6 @@ protobuf_generate(
   PROTOS
     cmatch/config.proto
     cmatch/table.proto
+    cmatch/lib.proto
   PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}
 )
